@@ -40,6 +40,7 @@ I = np.array([
     [1, 0],
     [0, 1]
 ], dtype=complex)
+
 class Qubit:
 
     def __init__(self):

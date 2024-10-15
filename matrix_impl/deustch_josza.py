@@ -1,9 +1,6 @@
-
-from matrix_impl.simulator import H, KET_0, X, I, BRA_0, KET_1, BRA_1
+from matrix_impl.simulator import H, KET_0, X
 import numpy as np
 import functools
-
-import matrix_impl.toffoli as toffoli
 
     
 def deutsch_algorithm(n, f: list[bool]):
@@ -41,21 +38,11 @@ def U(n, f: list[bool]):
     return U
 
 
-
-
-
-
 if __name__ ==  "__main__":
-    print(U(1,[0,1]))
-    print(toffoli.toffoli(3))
-    # check new algo for toffoli: (x,y -> y + and(x,))
-    g = []
-    
     n = [2,3,3]  # Input the number of qubits
     f_map = [[0,0,1,1],
              [1,1,1,1,1,1,1,1],
              [1,0,0,1,1,0,1,1]]  # Input the mapping functions
-    
-    
+
     for index, value in enumerate(n):
         deutsch_algorithm(n[index], f_map[index])  # Algorithm executed here

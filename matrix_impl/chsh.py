@@ -1,4 +1,4 @@
-from qrandom import qrng
+from matrix_impl.qrandom import qrng
 
 
 def my_stategy(inp: bool) -> bool: 
