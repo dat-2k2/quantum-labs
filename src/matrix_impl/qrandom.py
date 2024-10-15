@@ -1,12 +1,10 @@
 import numpy as np
-from simulator import H, KET_0, QuantumDevice, Qubit
-
+from simulator import H, KET_0
 
 def qrng() -> bool:
-    return np.random.ranf() < np.abs(H @KET_0)
+    return not np.random.ranf() < np.abs((H @ KET_0)[0,0])**2
 
 if __name__ == "__main__":
-    qsim = Qubit()
     for idx_sample in range(10):
-        random_sample = qrng(qsim)
+        random_sample = qrng()
         print(f"Our QRNG returned {random_sample}.")
