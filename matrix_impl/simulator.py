@@ -86,3 +86,5 @@ class QuantumDevice:
             qubit.reset()
             self.deallocate_qubit(qubit)
 
+if __name__ == "__main__":
+    print(Z@H@KET_0)

@@ -1,4 +1,4 @@
-from matrix_impl.simulator import H, KET_0, X
+from simulator import H, KET_0, X
 import numpy as np
 import functools
 
@@ -13,7 +13,7 @@ def deutsch_algorithm(n, f: list[bool]):
 
     out = Hs @ (U(n,f) @ (Hs @ inp))
 
-    measure = out[0,0]*out[0,0] + out[1,0]*out[1,0]
+    measure = out[0,0]*out[0,0]
 
     if measure < 1e-12: 
         print("The function is balanced.")
