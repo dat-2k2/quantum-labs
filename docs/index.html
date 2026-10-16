@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quantum Labs — interactive quantum algorithms</title>
+  <meta name="description" content="Eleven quantum computing experiments — QRNG, Deutsch–Jozsa, Bernstein–Vazirani, Simon, Grover, QFT, phase estimation, Shor, BB84, teleportation and the Shor 9-qubit code — running live in your browser.">
+  <meta name="theme-color" content="#0B0E14">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B0E14'/%3E%3Ctext x='16' y='22' font-family='monospace' font-size='16' text-anchor='middle' fill='%235EEAD4'%3E%CF%88%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <a class="skip" href="#labs">Skip to the labs</a>
+  <header class="nav">
+    <div class="wrap nav-inner">
+      <a class="logo" href="#top"><span class="logo-mark">|ψ⟩</span> Quantum Labs</a>
+      <nav class="links" aria-label="Main">
+        <a href="#labs">Labs</a>
+        <a href="#lab">Playground</a>
+        <a href="#sandbox">Simulator</a>
+        <a class="btn btn-ghost btn-sm" href="https://github.com/dat-2k2/quantum-labs" target="_blank" rel="noopener">GitHub ↗</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero wrap">
+      <div class="hero-copy">
+        <p class="eyebrow">Quantum computing · lab notebook</p>
+        <h1>Quantum algorithms<br>you can play with.</h1>
+        <p class="lead">Eleven experiments from my quantum computing coursework — from random number generation to Shor’s factoring and 9‑qubit error correction — rebuilt as live circuits that run right in your browser.</p>
+        <div class="ctas">
+          <a class="btn btn-primary" href="#labs">Explore the labs</a>
+          <a class="btn btn-ghost" href="#sandbox">Open the simulator</a>
+        </div>
+        <dl class="stats">
+          <div><dt>11</dt><dd>interactive labs</dd></div>
+          <div><dt>≤ 12</dt><dd>simulated qubits</dd></div>
+          <div><dt>0</dt><dd>installs needed</dd></div>
+        </dl>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <svg viewBox="0 0 480 480" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="240" cy="240" r="200" class="b-sphere"/>
+          <ellipse cx="240" cy="240" rx="200" ry="56" class="b-eq"/>
+          <line x1="240" y1="40" x2="240" y2="440" class="b-axis"/>
+          <line x1="40" y1="240" x2="440" y2="240" class="b-axis"/>
+          <g class="hero-vec">
+            <line x1="240" y1="240" x2="348" y2="112" class="b-vec"/>
+            <circle cx="348" cy="112" r="22" class="vec-glow"/>
+            <circle cx="348" cy="112" r="9" class="vec-dot"/>
+          </g>
+          <circle cx="240" cy="240" r="5" class="b-origin"/>
+          <text x="240" y="26" text-anchor="middle" class="b-lbl">|0⟩</text>
+          <text x="240" y="470" text-anchor="middle" class="b-lbl">|1⟩</text>
+        </svg>
+      </div>
+    </section>
+
+    <section id="labs" class="band">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">The labs</p>
+            <h2>Pick an experiment</h2>
+          </div>
+          <div class="chips" id="filters" role="toolbar" aria-label="Filter labs by category"></div>
+        </div>
+        <div class="grid" id="grid"></div>
+      </div>
+    </section>
+
+    <section id="lab" class="wrap lab" aria-live="polite">
+      <div class="lab-head">
+        <div>
+          <p class="eyebrow" id="lab-eyebrow"></p>
+          <h2 id="lab-title"></h2>
+          <p class="lead" id="lab-desc"></p>
+        </div>
+        <div class="lab-nav">
+          <button class="btn btn-ghost btn-sm" id="prev" type="button" aria-label="Previous lab">←</button>
+          <button class="btn btn-ghost btn-sm" id="next" type="button" aria-label="Next lab">→</button>
+          <a class="btn btn-ghost btn-sm" id="lab-src" target="_blank" rel="noopener">Notebook ↗</a>
+        </div>
+      </div>
+      <div class="bench">
+        <aside class="panel controls" aria-label="Controls">
+          <h3>Controls</h3>
+          <div id="controls" class="stack"></div>
+        </aside>
+        <div class="panel circuit-panel">
+          <div class="panel-head">
+            <h3>Circuit</h3>
+            <div class="panel-actions">
+              <span class="tag" id="circuit-tag"></span>
+              <button class="run-pill" id="run" type="button" title="Run again (Ctrl/⌘ + Enter)">▶ Run <kbd>⌘↵</kbd></button>
+            </div>
+          </div>
+          <div class="circuit-canvas" id="circuit"></div>
+        </div>
+        <div class="panel results" aria-label="Results">
+          <h3>Results</h3>
+          <div id="results" class="stack"></div>
+        </div>
+      </div>
+      <div class="panel extra" id="extra" hidden></div>
+      <ol class="steps" id="steps"></ol>
+    </section>
+
+    <section id="sandbox" class="band">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Sandbox</p>
+            <h2>Build your own circuit</h2>
+            <p class="lead">Pick a gate, click a wire. Put a ● in the same column to control it. The state vector updates live.</p>
+          </div>
+        </div>
+        <div class="bench bench-2">
+          <div class="panel">
+            <div class="palette" id="palette" role="toolbar" aria-label="Gate palette"></div>
+            <div class="scroll-x"><div class="composer" id="composer"></div></div>
+            <div class="row-controls" id="composer-actions"></div>
+          </div>
+          <div class="panel">
+            <h3>State vector</h3>
+            <div id="statevec"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer-inner">
+      <span>|ψ⟩ Quantum Labs — coursework by Đạt Nguyễn</span>
+      <span>Built with a tiny state-vector simulator in vanilla JS · original notebooks in <a href="https://github.com/dat-2k2/quantum-labs" target="_blank" rel="noopener">Qiskit</a></span>
+    </div>
+  </footer>
+
+  <script type="module" src="assets/app.js"></script>
+</body>
+</html>
