@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Quantum Labs — interactive quantum algorithms</title>
-  <meta name="description" content="Eleven quantum computing experiments — QRNG, Deutsch–Jozsa, Bernstein–Vazirani, Simon, Grover, QFT, phase estimation, Shor, BB84, teleportation and the Shor 9-qubit code — running live in your browser.">
+  <meta name="description" content="A gamified, hands-on tutorial through eleven quantum algorithms — QRNG, Deutsch–Jozsa, Bernstein–Vazirani, Simon, Grover, QFT, phase estimation, Shor, BB84, teleportation and the Shor 9-qubit code — running live in your browser.">
   <meta name="theme-color" content="#0B0E14">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B0E14'/%3E%3Ctext x='16' y='22' font-family='monospace' font-size='16' text-anchor='middle' fill='%235EEAD4'%3E%CF%88%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,15 +13,16 @@
   <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-  <a class="skip" href="#labs">Skip to the labs</a>
+  <a class="skip" href="#quest">Skip to the quest</a>
   <header class="nav">
     <div class="wrap nav-inner">
       <a class="logo" href="#top"><span class="logo-mark">|ψ⟩</span> Quantum Labs</a>
       <nav class="links" aria-label="Main">
-        <a href="#labs">Labs</a>
-        <a href="#lab">Playground</a>
-        <a href="#sandbox">Simulator</a>
-        <a class="btn btn-ghost btn-sm" href="https://github.com/dat-2k2/quantum-labs" target="_blank" rel="noopener">GitHub ↗</a>
+        <a href="#quest">Quest</a>
+        <a href="#lab">Lab</a>
+        <a href="#arena">Arena</a>
+        <a href="https://github.com/dat-2k2/quantum-labs" target="_blank" rel="noopener">GitHub ↗</a>
+        <a class="hud" id="hud" href="#quest" aria-label="Your progress"></a>
       </nav>
     </div>
   </header>
@@ -29,17 +30,17 @@
   <main id="top">
     <section class="hero wrap">
       <div class="hero-copy">
-        <p class="eyebrow">Quantum computing · lab notebook</p>
+        <p class="eyebrow">Quantum computing · hands-on quest</p>
         <h1>Quantum algorithms<br>you can play with.</h1>
-        <p class="lead">Eleven experiments from my quantum computing coursework — from random number generation to Shor’s factoring and 9‑qubit error correction — rebuilt as live circuits that run right in your browser.</p>
+        <p class="lead">Eleven experiments from my quantum computing coursework, turned into a guided quest. Learn the idea, complete missions on live circuits, predict results in quizzes — and level up from <em>Classical Bit</em> to <em>Quantum Wizard</em>.</p>
         <div class="ctas">
-          <a class="btn btn-primary" href="#labs">Explore the labs</a>
-          <a class="btn btn-ghost" href="#sandbox">Open the simulator</a>
+          <a class="btn btn-primary" href="#lab" id="cta-resume">Start the quest</a>
+          <a class="btn btn-ghost" href="#arena">Enter the arena</a>
         </div>
         <dl class="stats">
-          <div><dt>11</dt><dd>interactive labs</dd></div>
-          <div><dt>≤ 12</dt><dd>simulated qubits</dd></div>
-          <div><dt>0</dt><dd>installs needed</dd></div>
+          <div><dt>11</dt><dd>labs · 44 missions</dd></div>
+          <div><dt>16</dt><dd>badges to earn</dd></div>
+          <div><dt>7</dt><dd>circuit puzzles</dd></div>
         </dl>
       </div>
       <div class="hero-art" aria-hidden="true">
@@ -60,67 +61,72 @@
       </div>
     </section>
 
-    <section id="labs" class="band">
-      <div class="wrap">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">The labs</p>
-            <h2>Pick an experiment</h2>
-          </div>
-          <div class="chips" id="filters" role="toolbar" aria-label="Filter labs by category"></div>
+    <section id="quest" class="band">
+      <div class="wrap quest">
+        <div class="quest-map">
+          <p class="eyebrow">Your quest</p>
+          <h2>From one qubit to error correction</h2>
+          <p class="lead">Six chapters, eleven labs. Clear missions to earn XP, stars and badges — finishing a mission in one lab unlocks the next.</p>
+          <div id="chapters" class="chapters"></div>
         </div>
-        <div class="grid" id="grid"></div>
+        <aside class="quest-side" id="side" aria-label="Your progress"></aside>
       </div>
     </section>
 
-    <section id="lab" class="wrap lab" aria-live="polite">
+    <section id="lab" class="wrap lab">
       <div class="lab-head">
         <div>
           <p class="eyebrow" id="lab-eyebrow"></p>
           <h2 id="lab-title"></h2>
           <p class="lead" id="lab-desc"></p>
         </div>
-        <div class="lab-nav">
-          <button class="btn btn-ghost btn-sm" id="prev" type="button" aria-label="Previous lab">←</button>
-          <button class="btn btn-ghost btn-sm" id="next" type="button" aria-label="Next lab">→</button>
+        <div class="lab-score">
+          <span class="stars-big" id="lab-stars"></span>
+          <span id="lab-xp"></span>
           <a class="btn btn-ghost btn-sm" id="lab-src" target="_blank" rel="noopener">Notebook ↗</a>
         </div>
       </div>
-      <div class="bench">
-        <aside class="panel controls" aria-label="Controls">
-          <h3>Controls</h3>
-          <div id="controls" class="stack"></div>
-        </aside>
-        <div class="panel circuit-panel">
-          <div class="panel-head">
-            <h3>Circuit</h3>
-            <div class="panel-actions">
-              <span class="tag" id="circuit-tag"></span>
-              <button class="run-pill" id="run" type="button" title="Run again (Ctrl/⌘ + Enter)">▶ Run <kbd>⌘↵</kbd></button>
+      <div class="tutorial">
+        <aside class="panel mission" id="mission" aria-label="Tutorial"></aside>
+        <div class="workspace">
+          <div class="panel circuit-panel">
+            <div class="panel-head">
+              <h3>Circuit</h3>
+              <div class="panel-actions">
+                <span class="tag" id="circuit-tag"></span>
+                <button class="run-pill" id="run" type="button" title="Run again (Ctrl/⌘ + Enter)">▶ Run <kbd>⌘↵</kbd></button>
+              </div>
+            </div>
+            <div class="circuit-canvas" id="circuit"></div>
+          </div>
+          <div class="ws-row">
+            <div class="panel controls" aria-label="Controls">
+              <h3>Controls</h3>
+              <div id="controls" class="stack"></div>
+            </div>
+            <div class="panel results" aria-label="Results" aria-live="polite">
+              <h3>Results</h3>
+              <div id="results" class="stack"></div>
             </div>
           </div>
-          <div class="circuit-canvas" id="circuit"></div>
-        </div>
-        <div class="panel results" aria-label="Results">
-          <h3>Results</h3>
-          <div id="results" class="stack"></div>
+          <div class="panel extra" id="extra" hidden></div>
         </div>
       </div>
-      <div class="panel extra" id="extra" hidden></div>
-      <ol class="steps" id="steps"></ol>
     </section>
 
-    <section id="sandbox" class="band">
+    <section id="arena" class="band">
       <div class="wrap">
         <div class="section-head">
           <div>
-            <p class="eyebrow">Sandbox</p>
-            <h2>Build your own circuit</h2>
-            <p class="lead">Pick a gate, click a wire. Put a ● in the same column to control it. The state vector updates live.</p>
+            <p class="eyebrow">Arena</p>
+            <h2>Circuit puzzles</h2>
+            <p class="lead">Pick a target state and build it. Choose a gate, click a wire; a ● in the same column controls the other gates. Or switch to free play.</p>
           </div>
         </div>
+        <div class="challenges" id="challenges" role="list"></div>
         <div class="bench bench-2">
           <div class="panel">
+            <div class="goal" id="goal"></div>
             <div class="palette" id="palette" role="toolbar" aria-label="Gate palette"></div>
             <div class="scroll-x"><div class="composer" id="composer"></div></div>
             <div class="row-controls" id="composer-actions"></div>
@@ -137,7 +143,7 @@
   <footer class="footer">
     <div class="wrap footer-inner">
       <span>|ψ⟩ Quantum Labs — coursework by Đạt Nguyễn</span>
-      <span>Built with a tiny state-vector simulator in vanilla JS · original notebooks in <a href="https://github.com/dat-2k2/quantum-labs" target="_blank" rel="noopener">Qiskit</a></span>
+      <span>Progress is saved in this browser · original notebooks in <a href="https://github.com/dat-2k2/quantum-labs" target="_blank" rel="noopener">Qiskit</a></span>
     </div>
   </footer>
 

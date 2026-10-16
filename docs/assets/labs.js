@@ -43,9 +43,10 @@ const qrng = {
       n: st.n, ops,
       results: [
         verdict('Your random number', `${parseInt(one, 2)}`, `binary ${one} · range 0 – ${2 ** st.n - 1}`),
-        html(histogram(counts, { sort: 'key', limit: 32, label: (k) => `${k}  (${parseInt(k, 2)})` })),
+        html(histogram(counts, { sort: 'key', limit: 16, label: (k) => `${k}  (${parseInt(k, 2)})` })),
         note(`Ideal: each of the ${2 ** st.n} outcomes appears ≈ ${(st.shots / 2 ** st.n).toFixed(1)} times.`),
       ],
+      facts: { n: st.n, number: parseInt(one, 2) },
     };
   },
 };
@@ -101,7 +102,8 @@ const deutschJozsa = {
         `P(|${zero}⟩) = ${((counts.get(zero) || 0) / st.shots).toFixed(2)} · a classical computer may need ${2 ** (n - 1) + 1} queries`),
     ];
     if (st.kind === 'mystery') results.push(st.reveal ? note(`The oracle was <b>${name}</b>.`) : button('Reveal the oracle', () => set({ reveal: true }), 'ghost'));
-    return { n: n + 1, ops, expand: st.expand && !hidden, wireLabels: [...qs.map((q) => `q${q}`), 'anc'], results };
+    return { n: n + 1, ops, expand: st.expand && !hidden, wireLabels: [...qs.map((q) => `q${q}`), 'anc'], results,
+      facts: { n, kind: st.kind, mask: st.mask, constant, reveal: st.reveal } };
   },
 };
 
@@ -136,6 +138,7 @@ const bernsteinVazirani = {
         html(histogram(counts, { highlight: (k) => k === secret })),
         verdict('Recovered secret', `s = ${best}  ${best === secret ? '✓' : '✗'}`, `1 oracle query vs ${n} classically`),
       ],
+      facts: { n, s: st.s, recovered: best === secret, expand: st.expand },
     };
   },
 };
@@ -184,6 +187,7 @@ const simon = {
         el('div', { class: 'eqs' }, el('div', { class: 'field-label' }, 'Equations over GF(2)'), html(`<code>${eqs}</code>`)),
         verdict('Solved period', main, sub, cands.length > 1 ? 'warn' : 'ok'),
       ],
+      facts: { n, b: st.b, shots: st.shots, solved: cands.length === 1 && cands[0] === st.b, zeroCase: st.b === 0 && cands.length === 0 },
     };
   },
 };
@@ -210,7 +214,7 @@ const grover = {
     ['Mark', 'The oracle U_ω flips the sign of the marked items.'],
     ['Diffuse', 'U_s reflects about the mean — marked amplitudes grow by ~2/√N each round.'],
   ],
-  init: () => ({ n: 4, marked: [5], k: null, shots: 1000 }),
+  init: () => ({ n: 4, marked: [5], k: 1, shots: 1000 }),
   controls(st, set) {
     const N = 2 ** st.n, kOpt = optimalK(N, st.marked.length), k = st.k ?? kOpt;
     const grid = el('div', { class: 'cells', style: `--cols:${Math.min(N, 8)}` });
@@ -261,6 +265,7 @@ const grover = {
         ], { xLabel: 'iterations k', yLabel: 'P(success)', yMax: 1, xMax: curve.length - 1, width: 900, height: 260 })),
         note('Grover’s algorithm overshoots: past the optimal k the amplitude rotates away from the marked state again.'),
       ],
+      facts: { n, M: st.marked.length, k, kOpt, pSucc },
     };
   },
 };
@@ -325,6 +330,7 @@ const qft = {
         verdict('Matches classical DFT', `max error ${err.toExponential(1)}  ${err < 1e-9 ? '✓' : '✗'}`, 'numpy: np.fft.ifft(ψ, norm="ortho")'),
         note('Circle size = magnitude, hand + colour = phase. For a basis input every output has equal size and the phase advances by x·2π/N per step.'),
       ],
+      facts: { n, mode: st.mode, x: st.x, err },
     };
   },
 };
@@ -364,6 +370,7 @@ const phaseEstimation = {
         verdict('Estimated phase', `φ̃ = ${parseInt(best, 2)}/${T} = ${est.toFixed(4)}`, `true φ = ${st.phi.toFixed(4)} · error ${err.toFixed(4)} (resolution 1/${T})`, err <= 1 / T ? 'ok' : 'warn'),
         note('If φ·2^t is an integer the answer is exact; otherwise the peak spreads over neighbouring bins.'),
       ],
+      facts: { t, phi: st.phi, est, err },
     };
   },
 };
@@ -416,6 +423,7 @@ const shorFactor = {
       ],
       extra: [el('h3', {}, 'Continued-fraction table'), html(table),
         note('Each measured phase ≈ s/r. <code>Fraction(phase).limit_denominator(15)</code> guesses r; the least common multiple of the guesses is the period.')],
+      facts: { a, nc, r, success },
     };
   },
 };
@@ -508,6 +516,7 @@ const bb84 = {
           errs ? 'bad' : 'ok'),
       ],
       extra: [el('h3', {}, 'Transmission log'), el('div', { class: 'scroll-x' }, table)],
+      facts: { n, eve: st.eve, errs, kept: keep.length, eveMirrors: st.eve && st.eBases.every((v, j) => v === st.aBases[j]) },
     };
   },
 };
@@ -524,14 +533,14 @@ const teleport = {
     ['Bell measurement', 'Alice entangles |ψ⟩ with her half and measures both qubits.'],
     ['Correct', 'Bob applies X^m1 Z^m0 and now holds |ψ⟩ — without it ever travelling.'],
   ],
-  init: () => ({ theta: 1.1, phi: 0.8, corr: true, r: [Math.random(), Math.random()] }),
+  init: () => ({ theta: 1.1, phi: 0.8, corr: true, r: [Math.random(), Math.random()], runs: 0 }),
   controls: (st, set) => [
     slider('θ (polar)', { min: 0, max: 3.1416, step: 0.01, value: st.theta, format: (v) => `${((v * 180) / Math.PI).toFixed(0)}°`, onInput: (theta) => set({ theta }) }),
     slider('φ (azimuth)', { min: 0, max: 6.2832, step: 0.01, value: st.phi, format: (v) => `${((v * 180) / Math.PI).toFixed(0)}°`, onInput: (phi) => set({ phi }) }),
     segmented('Presets', { options: [['0', '|0⟩'], ['1', '|1⟩'], ['+', '|+⟩'], ['i', '|i⟩']], value: null,
       onChange: (v) => set({ theta: { 0: 0, 1: Math.PI, '+': Math.PI / 2, i: Math.PI / 2 }[v], phi: v === 'i' ? Math.PI / 2 : 0 }) }),
     toggle('Bob applies corrections', { value: st.corr, onChange: (corr) => set({ corr }) }),
-    button('▶  Teleport again', () => set({ r: [Math.random(), Math.random()] })),
+    button('▶  Teleport again', () => set({ r: [Math.random(), Math.random()], runs: st.runs + 1 })),
   ],
   compute(st) {
     const pre = [{ g: 'BLOCK', t: [0], ops: prepOps(0, st.theta, st.phi), label: '|ψ⟩' }, { g: 'H', t: [1] }, { g: 'X', c: [1], t: [2] }, BAR,
@@ -557,6 +566,7 @@ const teleport = {
           st.corr ? `Bob applied ${fix}.` : `Without corrections Bob holds a scrambled copy (needed: ${fix}).`, fid > 0.999 ? 'ok' : 'warn'),
         note('Each of the four outcomes 00, 01, 10, 11 occurs with probability 25%, regardless of |ψ⟩ — the measurement reveals nothing about the state.'),
       ],
+      facts: { theta: st.theta, corr: st.corr, fid, m0, m1, runs: st.runs },
     };
   },
 };
@@ -603,7 +613,7 @@ const shor9 = {
     ['Error', 'Any single-qubit Pauli error (X, Y or Z) on any of the 9 qubits.'],
     ['Decode & correct', 'Majority votes via CNOT + Toffoli undo the error; ancillas hold the syndrome.'],
   ],
-  init: () => ({ input: 'custom', err: 'Y', q: 4, expand: false, kind: 'depol', sweep: null, running: false }),
+  init: () => ({ input: 'custom', err: 'none', q: 4, expand: false, kind: 'depol', sweep: null, running: false }),
   controls: (st, set) => [
     segmented('Logical input', { options: [['zero', '|0⟩'], ['one', '|1⟩'], ['plus', '|+⟩'], ['custom', 'custom']], value: st.input, onChange: (input) => set({ input }) }),
     segmented('Error', { options: [['none', 'none'], ['X', 'X'], ['Y', 'Y'], ['Z', 'Z']], value: st.err, onChange: (err) => set({ err }) }),
@@ -659,6 +669,7 @@ const shor9 = {
         el('div', { class: 'keys' }, el('div', { class: 'field-label' }, 'Syndrome left in ancillas q8…q1'), el('code', {}, syn)),
       ],
       extra,
+      facts: { err: st.err, q: st.q, F, sweepDone: !!st.sweep },
     };
   },
 };
