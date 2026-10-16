@@ -1,4 +1,4 @@
-// Progress, XP, levels, badges and feedback (toasts + confetti). Progress is kept per browser in localStorage.
+// Progress, XP, levels, badges and feedback toasts. Progress is kept per browser in localStorage.
 
 import { MISSIONS, LAB_BADGES, SPECIAL_BADGES, CHALLENGES, LEVELS, CHAPTERS } from './missions.js';
 import { el } from './ui.js';
@@ -40,7 +40,7 @@ export const stars = (lab) => Math.floor((3 * doneList(lab).length) / labTotal(l
 export const hintUsed = (lab, id) => !!P.hints[`${lab}/${id}`];
 export const labXp = (lab) => MISSIONS[lab].reduce((a, m) => a + (isDone(lab, m.id) ? reward(lab, m) : 0), 0);
 export const labXpMax = (lab) => MISSIONS[lab].reduce((a, m) => a + m.xp, 0);
-const reward = (lab, m) => Math.max(5, m.xp - (hintUsed(lab, m.id) ? 5 : 0));
+export const reward = (lab, m) => Math.max(5, m.xp - (hintUsed(lab, m.id) ? 5 : 0));
 
 export function isUnlocked(lab) {
   const i = ORDER.indexOf(lab);
@@ -59,7 +59,6 @@ function addXp(n) {
   const after = level();
   if (after.i > before) {
     toast(`Level ${after.i}`, `You are now a <b>${after.name}</b>`, 'level');
-    confetti();
   }
 }
 
@@ -76,11 +75,11 @@ function award(id) {
 }
 
 // Mark a mission done; returns true if this call completed it.
-export function complete(lab, m, { firstTry } = {}) {
+export function complete(lab, m, { firstTry, quiet } = {}) {
   if (isDone(lab, m.id)) return false;
   (P.done[lab] ||= []).push(m.id);
   const xp = reward(lab, m);
-  toast(`+${xp} XP`, m.quiz ? 'Correct!' : `Mission complete — ${m.text}`, 'xp');
+  if (!quiet) toast(`+${xp} XP`, m.quiz ? 'Correct!' : `Mission complete — ${m.text}`, 'xp');
   addXp(xp);
   if (!P.badges.includes('first')) award('first');
   if (m.badge) award(m.badge);
@@ -89,7 +88,6 @@ export function complete(lab, m, { firstTry } = {}) {
     toast('★★★', `Lab complete! +${LAB_BONUS} XP bonus`, 'level');
     addXp(LAB_BONUS);
     award(lab);
-    confetti();
   }
   save();
   return true;
@@ -99,11 +97,12 @@ export function quizTry(lab, id) { const k = `${lab}/${id}`; P.tries[k] = (P.tri
 export const quizTries = (lab, id) => P.tries[`${lab}/${id}`] || 0;
 
 export function completeChallenge(c) {
+  // returns true only the first time a puzzle is solved
   if (P.arena.includes(c.id)) return false;
   P.arena.push(c.id);
   toast(`+${c.xp} XP`, `Challenge solved — ${c.title}`, 'xp');
   addXp(c.xp);
-  if (P.arena.length === CHALLENGES.length) { award('arena'); confetti(); }
+  if (P.arena.length === CHALLENGES.length) award('arena');
   save();
   return true;
 }
@@ -118,15 +117,3 @@ export function toast(big, small, kind = 'xp') {
   setTimeout(() => t.remove(), 3700);
 }
 
-export function confetti() {
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const layer = document.body.appendChild(el('div', { class: 'confetti', 'aria-hidden': 'true' }));
-  const colors = ['#5EEAD4', '#A78BFA', '#FBBF24', '#F472B6', '#E6EAF2'];
-  for (let i = 0; i < 80; i++) {
-    const p = el('i');
-    p.style.cssText = `left:${Math.random() * 100}%;background:${colors[i % colors.length]};`
-      + `--dx:${(Math.random() - 0.5) * 240}px;--rot:${Math.random() * 720}deg;animation-delay:${Math.random() * 0.25}s;animation-duration:${1.6 + Math.random()}s`;
-    layer.append(p);
-  }
-  setTimeout(() => layer.remove(), 3200);
-}

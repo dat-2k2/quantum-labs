@@ -8,101 +8,125 @@ import * as G from './game.js';
 const $ = (id) => document.getElementById(id);
 const labById = (id) => LABS.find((l) => l.id === id);
 const short = (lab) => lab.title.replace('’s Algorithm', '').replace(': factor 15', '');
+const starStr = (n) => '★'.repeat(n) + '☆'.repeat(3 - n);
 
-// ============================================================ HUD + quest map
-let lockPrompt = null;
+// ============================================================ routing
+// #/            course
+// #/lab/<id>    lesson (focus mode)
+// #/arena       circuit puzzles
+function route() {
+  const h = location.hash;
+  const lab = h.match(/^#\/?lab\/(\w+)/)?.[1];
+  const view = lab && labById(lab) ? 'lesson' : h.startsWith('#/arena') ? 'arena' : 'course';
+  for (const v of ['course', 'lesson', 'arena']) $(`view-${v}`).hidden = v !== view;
+  document.body.classList.toggle('focus', view === 'lesson');
+  document.querySelectorAll('[data-route]').forEach((a) => a.classList.toggle('on', a.dataset.route === view));
+  if (view === 'lesson') { if (current?.lab.id !== lab) openLab(lab); }
+  else { current = null; }
+  if (view === 'course') renderCourse();
+  if (view === 'arena') renderComposer();
+  window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', route);
+const go = (hash) => { if (location.hash === hash) route(); else location.hash = hash; };
 
+// ============================================================ HUD + course
 function renderHud() {
-  const lv = G.level(), st = G.state();
-  $('hud').replaceChildren(
-    el('span', { class: 'hud-xp' }, `⚡ ${st.xp} XP`),
-    el('span', { class: 'hud-lv' }, el('span', {}, `Lv ${lv.i} · ${lv.name}`), el('span', { class: 'meter' }, el('span', { style: `width:${lv.pct * 100}%` }))),
-    el('span', { class: 'hud-badges' }, `🏅 ${st.badges.length}`));
+  const lv = G.level();
+  $('hud').textContent = `${G.state().xp} XP · Level ${lv.i}`;
 }
 
-function starStr(n) { return '★'.repeat(n) + '☆'.repeat(3 - n); }
+let lockOpen = null;
+function renderCourse() {
+  const st = G.state(), next = labById(G.nextUp());
+  const started = st.xp > 0;
+  $('cta').textContent = started ? `Continue: ${short(next)}  →` : 'Start the first lab  →';
+  $('cta').href = `#/lab/${next.id}`;
 
-function renderQuest() {
   $('chapters').replaceChildren(...CHAPTERS.map((ch, ci) => {
     const done = ch.labs.filter(G.labComplete).length;
-    const track = el('div', { class: 'track' });
-    ch.labs.forEach((id, i) => {
-      const lab = labById(id), unlocked = G.isUnlocked(id), complete = G.labComplete(id);
-      const isCurrent = current?.lab.id === id;
-      const state = complete ? 'done' : !unlocked ? 'locked' : isCurrent || G.nextUp() === id ? 'current' : 'open';
-      if (i) track.append(el('span', { class: 'link' + (unlocked ? ' on' : '') }));
-      const node = el('div', { class: 'node-wrap' },
-        el('button', {
-          type: 'button', class: `node node-${state}`, 'aria-label': `${lab.title}${unlocked ? '' : ' (locked)'}`,
-          onclick: () => {
-            if (!unlocked) { lockPrompt = lockPrompt === id ? null : id; renderQuest(); return; }
-            openLab(id); $('lab').scrollIntoView();
-          },
-        }, el('span', { class: 'disc' }, complete ? '✓' : unlocked ? lab.num : '🔒'),
-        el('span', { class: 'node-label' }, short(lab)),
-        el('span', { class: 'node-stars' }, starStr(G.stars(id)))),
-        lockPrompt === id ? el('div', { class: 'lock-pop' },
-          el('span', {}, `Clear a mission in ${short(labById(G.ORDER[G.ORDER.indexOf(id) - 1]))} first.`),
-          el('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: () => { G.unlock(id); lockPrompt = null; openLab(id); $('lab').scrollIntoView(); } }, 'Skip ahead')) : null);
-      track.append(node);
-    });
-    return el('div', { class: 'chapter' + (done === ch.labs.length ? ' cleared' : '') },
-      el('div', { class: 'chapter-info' },
-        el('div', { class: 'field-label' }, `Chapter ${ci + 1}`),
-        el('h3', {}, ch.name),
-        el('div', { class: 'chapter-count' }, `${done}/${ch.labs.length} complete`)),
-      track);
-  }));
+    return el('section', { class: 'chapter' },
+      el('div', { class: 'chapter-head' },
+        el('span', { class: 'num' }, String(ci + 1).padStart(2, '0')), el('h2', {}, ch.name),
+        el('span', { class: 'count' }, `${done}/${ch.labs.length}`)),
+      ...ch.labs.map((id) => {
+        const lab = labById(id), unlocked = G.isUnlocked(id), complete = G.labComplete(id);
+        const n = G.doneList(id).length, total = G.labTotal(id);
+        const isNext = id === next.id && !complete;
+        const label = complete ? 'Review' : !unlocked ? 'Locked' : n ? 'Continue' : 'Start';
+        const open = () => {
+          if (unlocked) go(`#/lab/${id}`);
+          else { lockOpen = lockOpen === id ? null : id; renderCourse(); }
+        };
+        const prev = labById(G.ORDER[G.ORDER.indexOf(id) - 1]);
+        return el('div', { class: 'row' + (unlocked ? '' : ' locked'), onclick: open },
+          el('span', { class: 'ring' + (complete ? ' done' : ''), style: `--p:${(100 * n) / total}` }, complete ? '✓' : ''),
+          el('div', {}, el('div', { class: 'row-title' }, lab.title), el('div', { class: 'row-desc' }, lab.desc)),
+          el('span', { class: 'row-count' }, `${n}/${total}`),
+          el('button', { type: 'button', class: `btn btn-sm ${isNext ? 'btn-primary' : 'btn-ghost'}`, onclick: (e) => { e.stopPropagation(); open(); } }, label),
+          lockOpen === id ? el('div', { class: 'row-lock', onclick: (e) => e.stopPropagation() },
+            el('span', {}, `Clear one mission in ${short(prev)} to unlock.`),
+            el('button', { type: 'button', class: 'link-btn', onclick: () => { G.unlock(id); lockOpen = null; go(`#/lab/${id}`); } }, 'Skip ahead →')) : null);
+      }));
+  }), el('section', { class: 'chapter' },
+    el('div', { class: 'chapter-head' }, el('span', { class: 'num' }, '++'), el('h2', {}, 'Practice'),
+      el('span', { class: 'count' }, `${st.arena.length}/${CHALLENGES.length}`)),
+    el('div', { class: 'row', onclick: () => go('#/arena') },
+      el('span', { class: 'ring' + (st.arena.length === CHALLENGES.length ? ' done' : ''), style: `--p:${(100 * st.arena.length) / CHALLENGES.length}` }),
+      el('div', {}, el('div', { class: 'row-title' }, 'Arena: circuit puzzles'), el('div', { class: 'row-desc' }, 'Build Bell pairs, GHZ states and more from scratch')),
+      el('span', { class: 'row-count' }, `${st.arena.length}/${CHALLENGES.length}`),
+      el('button', { type: 'button', class: 'btn btn-sm btn-ghost' }, 'Open'))));
 
-  const lv = G.level(), st = G.state(), next = labById(G.nextUp());
-  const left = G.labTotal(next.id) - G.doneList(next.id).length;
+  const lv = G.level();
+  const labsDone = G.ORDER.filter(G.labComplete).length;
+  const missions = G.ORDER.reduce((a, id) => a + G.doneList(id).length, 0);
+  const totalMissions = G.ORDER.reduce((a, id) => a + G.labTotal(id), 0);
   $('side').replaceChildren(
-    el('div', { class: 'panel player' },
-      el('div', { class: 'field-label' }, `Level ${lv.i}`),
-      el('div', { class: 'player-name' }, lv.name),
-      el('div', { class: 'meter big' }, el('span', { style: `width:${lv.pct * 100}%` })),
-      el('div', { class: 'player-xp' }, lv.next ? `${st.xp} / ${lv.next} XP to ${lv.nextName}` : `${st.xp} XP — max level!`)),
-    el('div', { class: 'panel nextup' },
-      el('div', { class: 'field-label' }, G.labComplete(next.id) ? 'All done!' : 'Next up'),
-      el('div', { class: 'player-name sm' }, next.title),
-      el('div', { class: 'player-xp' }, left ? `${left} of ${G.labTotal(next.id)} missions left` : 'Every mission cleared'),
-      el('button', { type: 'button', class: 'btn btn-primary', onclick: () => { openLab(next.id); $('lab').scrollIntoView(); } },
-        G.doneList(next.id).length ? 'Resume lab →' : 'Start lab →')),
-    el('div', { class: 'panel badges' },
-      el('div', { class: 'field-label' }, `Badges  ${st.badges.length} / ${G.ALL_BADGES.length}`),
-      el('div', { class: 'badge-grid' }, ...G.ALL_BADGES.map((id) => {
+    el('div', { class: 'side-level' },
+      el('div', { class: 'field-label' }, `Level ${lv.i}`), el('div', { class: 'name' }, lv.name),
+      el('div', { class: 'meter' }, el('span', { style: `width:${lv.pct * 100}%` })),
+      el('div', { class: 'mono-sm' }, lv.next ? `${st.xp} / ${lv.next} XP to ${lv.nextName}` : `${st.xp} XP — top level`)),
+    el('dl', { class: 'stats' }, ...[
+      ['Labs completed', `${labsDone} / ${G.ORDER.length}`], ['Missions', `${missions} / ${totalMissions}`],
+      ['Badges', `${st.badges.length} / ${G.ALL_BADGES.length}`], ['Arena puzzles', `${st.arena.length} / ${CHALLENGES.length}`],
+    ].map(([k, v]) => el('div', {}, el('dt', {}, k), el('dd', {}, v)))),
+    el('div', { class: 'side-level' }, el('div', { class: 'field-label' }, 'Badges'),
+      el('div', { class: 'badge-list' }, ...G.ALL_BADGES.map((id) => {
         const [emoji, name] = G.badgeInfo(id), got = st.badges.includes(id);
-        return el('div', { class: 'badge' + (got ? ' got' : ''), title: got ? name : `${name} (locked)` },
-          el('span', { class: 'hex' }, got ? emoji : '?'), el('span', { class: 'badge-name' }, name));
+        return el('span', { class: 'badge' + (got ? ' got' : ''), title: got ? name : `${name} — locked`, 'aria-label': got ? name : `${name} (locked)` }, emoji);
       }))),
-    el('button', { type: 'button', class: 'reset', onclick: () => {
-      if (confirm('Reset all XP, missions and badges?')) { G.reset(); openLab(G.ORDER[0], false); }
-    } }, 'Reset progress'));
-
-  $('cta-resume').textContent = st.xp ? `Resume: ${short(next)} →` : 'Start the quest';
-  $('cta-resume').onclick = (e) => { e.preventDefault(); openLab(next.id); $('lab').scrollIntoView(); };
+    el('button', { type: 'button', class: 'reset', onclick: () => { if (confirm('Reset all XP, missions and badges?')) { G.reset(); renderCourse(); } } }, 'Reset progress'));
 }
 
-// ============================================================ lab tutorial
-let current = null; // { lab, st, set, tab, interacted, facts }
-const wrong = new Set(); // wrong quiz answers picked this visit: `${lab}/${mission}/${option}`
+// ============================================================ lesson
+let current = null; // { lab, st, set, steps, step, interacted, sel, wrong }
 
-function openLab(id, updateHash = true) {
-  const lab = labById(id) || LABS[0];
+function stepsFor(lab) {
+  const ms = MISSIONS[lab.id];
+  return [{ type: 'learn' }, ...ms.filter((m) => m.check).map((m) => ({ type: 'mission', m })),
+    ...ms.filter((m) => m.quiz).map((m) => ({ type: 'quiz', m })), { type: 'done' }];
+}
+const stepDone = (s) => s.type === 'learn' ? current.step > 0 || G.doneList(current.lab.id).length > 0
+  : (s.type === 'mission' || s.type === 'quiz') && G.isDone(current.lab.id, s.m.id);
+
+function openLab(id) {
+  const lab = labById(id);
   const st = lab.init();
-  const set = (patch = {}) => { Object.assign(st, patch); current.interacted = true; render(); };
-  current = { lab, st, set, interacted: false, tab: G.doneList(lab.id).length ? 'missions' : 'learn' };
-  const ci = G.chapterOf(lab.id);
-  $('lab-eyebrow').textContent = `Chapter ${ci + 1} · ${CHAPTERS[ci].name} · Lab ${lab.num} / ${LABS.length}`;
-  $('lab-title').textContent = lab.title;
-  $('lab-desc').textContent = lab.desc;
-  $('lab-src').href = lab.url;
-  if (updateHash && location.hash !== `#lab/${lab.id}`) history.replaceState(null, '', `#lab/${lab.id}`);
-  render();
-  renderQuest();
+  const set = (patch = {}) => { Object.assign(st, patch); current.interacted = true; renderWorkspace(); };
+  const steps = stepsFor(lab);
+  const firstOpen = steps.findIndex((s, i) => i > 0 && s.type !== 'done' && !G.isDone(id, s.m.id));
+  current = { lab, st, set, steps, step: G.doneList(id).length ? (firstOpen < 0 ? steps.length - 1 : firstOpen) : 0, interacted: false, sel: null, wrong: false };
+  renderWorkspace();
 }
 
-function render() {
+function goStep(i) {
+  current.step = Math.max(0, Math.min(current.steps.length - 1, i));
+  current.sel = null; current.wrong = false;
+  renderStep();
+  window.scrollTo(0, 0);
+}
+
+function renderWorkspace() {
   const { lab, st, set } = current;
   const active = document.activeElement;
   const inControls = active && $('controls').contains(active);
@@ -119,84 +143,125 @@ function render() {
   $('extra').hidden = !res.extra;
   if (res.extra) $('extra').replaceChildren(...res.extra);
 
-  current.facts = res.facts;
   if (current.interacted) {
+    const here = current.steps[current.step];
     for (const m of MISSIONS[lab.id]) {
-      if (m.check && !G.isDone(lab.id, m.id) && m.check(res.facts, st)) G.complete(lab.id, m);
+      if (m.check && !G.isDone(lab.id, m.id) && m.check(res.facts, st)) G.complete(lab.id, m, { quiet: here.m === m });
     }
   }
-  renderMission();
+  renderStep();
 }
 
-function renderMission() {
-  const { lab, tab } = current;
-  const ms = MISSIONS[lab.id];
-  const actions = ms.filter((m) => m.check), quizzes = ms.filter((m) => m.quiz);
-  const nDone = (list) => list.filter((m) => G.isDone(lab.id, m.id)).length;
-  const setTab = (t) => { current.tab = t; renderMission(); };
+function renderStep() {
+  const { lab, steps, step } = current;
+  const s = steps[step];
+  const ci = G.chapterOf(lab.id);
+  const actions = steps.filter((x) => x.type === 'mission');
+  const quizzes = steps.filter((x) => x.type === 'quiz');
 
-  const tabs = el('div', { class: 'seg tabs', role: 'tablist' }, ...[
-    ['learn', '1 · Learn'], ['missions', `2 · Missions ${nDone(actions)}/${actions.length}`], ['quiz', `3 · Quiz ${nDone(quizzes)}/${quizzes.length}`],
-  ].map(([t, label]) => el('button', { type: 'button', role: 'tab', 'aria-selected': t === tab ? 'true' : 'false', class: t === tab ? 'on' : '', onclick: () => setTab(t) }, label)));
+  // top bar
+  $('segs').replaceChildren(...steps.slice(0, -1).map((x, i) => el('span', {
+    class: stepDone(x) ? 'on' : i === step ? 'here' : '',
+  })));
+  $('lxp').textContent = `⚡ ${G.state().xp}`;
 
-  const total = ms.length, done = G.doneList(lab.id).length;
-  const progress = el('div', { class: 'mprog' },
-    el('div', { class: 'field-head' }, el('span', { class: 'field-label' }, 'Progress'), el('span', { class: 'field-value' }, `${done} / ${total}`)),
-    el('div', { class: 'meter' }, el('span', { style: `width:${(100 * done) / total}%` })));
+  // contents
+  const stepLabel = (x) => x.type === 'learn' ? 'Lesson' : x.type === 'done' ? 'Summary'
+    : x.type === 'quiz' ? `Quiz ${quizzes.indexOf(x) + 1}` : `Mission ${actions.indexOf(x) + 1}`;
+  const nextId = G.ORDER[G.ORDER.indexOf(lab.id) + 1];
+  $('toc').replaceChildren(
+    el('p', { class: 'eyebrow' }, `${String(ci + 1).padStart(2, '0')} · ${CHAPTERS[ci].name}`),
+    el('div', { class: 'toc-lab' }, lab.title),
+    ...steps.map((x, i) => el('button', { type: 'button', class: i === step ? 'here' : '', onclick: () => goStep(i) },
+      el('span', { class: 'mark' + (stepDone(x) ? ' ok' : '') }, stepDone(x) ? '✓' : i === step ? '●' : '○'),
+      el('span', {}, stepLabel(x)))),
+    el('div', { class: 'toc-next' }, 'Next: ', nextId ? el('a', { href: `#/lab/${nextId}` }, labById(nextId).title) : el('a', { href: '#/arena' }, 'Arena puzzles')));
 
-  let body;
-  if (tab === 'learn') {
-    body = el('div', { class: 'lesson' },
-      el('ol', { class: 'lesson-steps' }, ...lab.steps.map(([t, d], i) => el('li', {},
-        el('span', { class: 'lesson-n' }, String(i + 1)), el('div', {}, el('h4', {}, t), el('p', {}, d))))),
-      el('p', { class: 'note' }, 'Play with the controls on the right while you read — every change re-runs the circuit.'),
-      el('button', { type: 'button', class: 'btn btn-primary', onclick: () => setTab('missions') }, 'Start the missions →'));
-  } else if (tab === 'missions') {
-    const activeId = actions.find((m) => !G.isDone(lab.id, m.id))?.id;
-    body = el('ol', { class: 'tasks' }, ...actions.map((m, i) => {
-      const d = G.isDone(lab.id, m.id), isActive = m.id === activeId;
-      const hint = !d ? el('details', { class: 'hint', open: G.hintUsed(lab.id, m.id) }, el('summary', {}, el('span', {}, '💡 Stuck? Get a hint'), el('span', {}, '−5 XP')), el('p', {}, m.hint)) : null;
-      if (hint) hint.addEventListener('toggle', () => { if (hint.open && !G.hintUsed(lab.id, m.id)) { G.useHint(lab.id, m.id); renderMission(); } });
-      return el('li', { class: `task${d ? ' done' : ''}${isActive ? ' active' : ''}` },
-        el('span', { class: 'check', 'aria-hidden': 'true' }, d ? '✓' : String(i + 1)),
-        el('div', { class: 'task-body' }, el('span', { class: 'task-text' }, m.text), isActive || G.hintUsed(lab.id, m.id) ? hint : null),
-        el('span', { class: 'task-xp' }, `+${m.xp - (G.hintUsed(lab.id, m.id) ? 5 : 0)} XP`));
-    }));
-  } else {
-    body = el('div', { class: 'quizzes' }, ...quizzes.map((m) => {
-      const d = G.isDone(lab.id, m.id);
-      return el('div', { class: 'quiz' + (d ? ' done' : '') },
-        el('p', { class: 'quiz-q' }, m.quiz.q),
-        el('div', { class: 'quiz-opts' }, ...m.quiz.options.map((o, oi) => {
-          const key = `${lab.id}/${m.id}/${oi}`;
-          const cls = d && oi === m.quiz.answer ? ' right' : wrong.has(key) ? ' wrong' : '';
-          return el('button', { type: 'button', class: 'opt' + cls, disabled: d, onclick: () => {
-            const tries = G.quizTry(lab.id, m.id);
-            if (oi === m.quiz.answer) G.complete(lab.id, m, { firstTry: tries === 1 });
-            else wrong.add(key);
-            renderMission();
-          } }, o);
-        })),
-        d ? el('p', { class: 'quiz-explain' }, '✓ ', m.quiz.explain) : el('span', { class: 'task-xp' }, `+${m.xp} XP`));
-    }));
+  // stage
+  $('ws').hidden = s.type === 'quiz' || s.type === 'done';
+  const eyebrow = { learn: `Lesson · ${lab.title}`, mission: `Mission ${actions.indexOf(s) + 1} of ${actions.length} · ${lab.title}`,
+    quiz: `Quiz · ${lab.title}`, done: `Summary · ${lab.title}` }[s.type];
+  $('s-eyebrow').textContent = eyebrow;
+  $('s-title').textContent = s.type === 'learn' ? lab.desc : s.type === 'mission' ? s.m.text : s.type === 'quiz' ? s.m.quiz.q
+    : G.labComplete(lab.id) ? 'Lab complete.' : 'Almost there.';
+
+  let body = [];
+  if (s.type === 'learn') {
+    body = [el('ol', { class: 'lesson-steps' }, ...lab.steps.map(([t, d], i) => el('li', {},
+      el('span', { class: 'n' }, String(i + 1)), el('div', {}, el('h4', {}, t), el('p', {}, d)))))];
+  } else if (s.type === 'quiz') {
+    const done = G.isDone(lab.id, s.m.id);
+    body = [el('div', { class: 'opts', role: 'radiogroup' }, ...s.m.quiz.options.map((o, oi) => {
+      const cls = done ? (oi === s.m.quiz.answer ? ' right' : '') : current.sel === oi ? (current.wrong ? ' wrong sel' : ' sel') : '';
+      return el('button', { type: 'button', role: 'radio', 'aria-checked': current.sel === oi || (done && oi === s.m.quiz.answer) ? 'true' : 'false',
+        class: 'opt' + cls, disabled: done, onclick: () => { current.sel = oi; current.wrong = false; renderStep(); } },
+      el('span', { class: 'radio' }), el('span', {}, o));
+    }))];
+  } else if (s.type === 'done') {
+    const ms = MISSIONS[lab.id];
+    body = [el('div', { class: 'summary' },
+      el('div', { class: 'big', 'aria-label': `${G.stars(lab.id)} of 3 stars` }, starStr(G.stars(lab.id))),
+      el('div', { class: 'muted' }, `${G.labXp(lab.id)} of ${G.labXpMax(lab.id)} XP earned${G.labComplete(lab.id) ? ` · badge: ${G.badgeInfo(lab.id).join(' ')}` : ''}`),
+      el('ul', {}, ...ms.map((m) => {
+        const d = G.isDone(lab.id, m.id);
+        return el('li', { class: d ? 'ok' : '' }, el('span', { class: 'mark' }, d ? '✓' : '○'), el('span', {}, m.quiz ? `Quiz: ${m.quiz.q}` : m.text));
+      })),
+      G.labComplete(lab.id) ? null : el('p', { class: 'note' }, 'Open any unchecked step from the contents to finish it.'))];
   }
+  $('s-body').replaceChildren(...body);
+  renderBar();
+}
 
-  const i = G.ORDER.indexOf(lab.id);
-  const prevId = G.ORDER[i - 1], nextId = G.ORDER[i + 1];
-  const banner = G.labComplete(lab.id)
-    ? el('div', { class: 'complete' }, el('div', { class: 'complete-big' }, `${G.badgeInfo(lab.id)[0]} Lab complete!`),
-      el('div', { class: 'note' }, `Badge earned: ${G.badgeInfo(lab.id)[1]}`)) : null;
-  const foot = el('div', { class: 'mfoot' },
-    el('button', { type: 'button', class: 'btn btn-ghost btn-sm', disabled: !prevId, onclick: () => openLab(prevId) }, '← Back'),
-    el('span', { class: 'mfoot-count' }, `${i + 1} / ${G.ORDER.length}`),
-    el('button', { type: 'button', class: `btn btn-sm ${G.labComplete(lab.id) ? 'btn-primary' : 'btn-ghost'}`, disabled: !nextId, onclick: () => {
-      if (G.isUnlocked(nextId)) openLab(nextId);
-      else G.toast('🔒', 'Clear one mission here to unlock the next lab — or skip ahead from the quest map.', 'lock');
-    } }, 'Next lab →'));
+function renderBar() {
+  const { lab, steps, step } = current;
+  const s = steps[step];
+  const bar = $('fbar');
+  const next = () => goStep(step + 1);
+  const msg = (strong, sub) => el('div', { class: 'fbar-msg' }, strong ? el('strong', {}, strong) : null, sub ? el('span', {}, sub) : null);
+  let cls = '', kids = [];
 
-  $('mission').replaceChildren(tabs, progress, banner || '', body, foot);
-  $('lab-stars').textContent = starStr(G.stars(lab.id));
-  $('lab-xp').textContent = `+${G.labXp(lab.id)} / ${G.labXpMax(lab.id)} XP`;
+  if (s.type === 'learn') {
+    kids = [msg(null, 'Play with the controls while you read — every change re-runs the circuit.'),
+      el('button', { type: 'button', class: 'btn btn-primary', onclick: next }, 'Continue')];
+  } else if (s.type === 'mission') {
+    const done = G.isDone(lab.id, s.m.id), hinted = G.hintUsed(lab.id, s.m.id);
+    if (done) {
+      cls = 'ok';
+      kids = [msg(`✓ Mission complete  +${G.reward(lab.id, s.m)} XP`, null), el('button', { type: 'button', class: 'btn btn-ok', onclick: next }, 'Continue')];
+    } else {
+      kids = [
+        hinted ? msg(null, null) : el('button', { type: 'button', class: 'hint-btn', onclick: () => { G.useHint(lab.id, s.m.id); renderBar(); } }, '💡 Hint (−5 XP)'),
+        hinted ? el('div', { class: 'fbar-msg' }, el('span', { class: 'hint-text' }, `💡 ${s.m.hint}`)) : msg(null, 'Do the task above to continue.'),
+        el('button', { type: 'button', class: 'link-btn', onclick: next }, 'Skip'),
+        el('button', { type: 'button', class: 'btn btn-ghost', disabled: true }, 'Continue')];
+      if (hinted) kids.splice(0, 1);
+    }
+  } else if (s.type === 'quiz') {
+    const done = G.isDone(lab.id, s.m.id);
+    if (done) {
+      cls = 'ok';
+      kids = [msg(`✓ Correct!  +${s.m.xp} XP`, s.m.quiz.explain), el('button', { type: 'button', class: 'btn btn-ok', onclick: next }, 'Continue')];
+    } else {
+      if (current.wrong) cls = 'bad';
+      kids = [msg(current.wrong ? 'Not quite — try another answer.' : null, current.wrong ? null : 'Pick an answer.'),
+        el('button', { type: 'button', class: 'link-btn', onclick: next }, 'Skip'),
+        el('button', { type: 'button', class: 'btn btn-primary', disabled: current.sel == null, onclick: () => {
+          const tries = G.quizTry(lab.id, s.m.id);
+          if (current.sel === s.m.quiz.answer) G.complete(lab.id, s.m, { firstTry: tries === 1, quiet: true });
+          else current.wrong = true;
+          renderStep();
+        } }, 'Check')];
+    }
+  } else {
+    const nextId = G.ORDER[G.ORDER.indexOf(lab.id) + 1];
+    kids = [msg(null, null), el('a', { class: 'btn btn-ghost', href: '#/' }, 'Back to course'),
+      nextId ? el('button', { type: 'button', class: 'btn btn-primary', onclick: () => {
+        if (G.isUnlocked(nextId)) go(`#/lab/${nextId}`);
+        else G.toast('🔒', 'Clear one mission here to unlock the next lab.');
+      } }, `Next: ${short(labById(nextId))}  →`) : el('a', { class: 'btn btn-primary', href: '#/arena' }, 'On to the arena  →')];
+  }
+  bar.className = 'fbar' + (cls ? ' ' + cls : '');
+  bar.replaceChildren(...kids);
 }
 
 const countGates = (ops, expand) => ops.reduce((n, op) =>
@@ -205,24 +270,21 @@ const pathOf = (node, root) => { const p = []; while (node && node !== root) { p
 const nodeAt = (path, root) => path.reduce((n, i) => n?.children[i], root);
 
 $('controls').addEventListener('change', (e) => {
-  if (e.target.type !== 'range') return;
+  if (e.target.type !== 'range' || !current) return;
   const path = pathOf(e.target, $('controls'));
   $('controls').replaceChildren(...current.lab.controls(current.st, current.set));
   nodeAt(path, $('controls'))?.focus();
 });
 $('run').addEventListener('click', () => current?.set());
 document.addEventListener('keydown', (e) => {
-  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); current?.set(); }
-});
-window.addEventListener('hashchange', () => {
-  const m = location.hash.match(/^#lab\/(\w+)/);
-  if (m && m[1] !== current?.lab.id) openLab(m[1]);
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && current) { e.preventDefault(); current.set(); }
+  if (e.key === 'Escape' && current) go('#/');
 });
 
-// ============================================================ arena (sandbox + puzzles)
+// ============================================================ arena
 const TOOLS = ['H', 'X', 'Y', 'Z', 'S', 'T', '●', '⌫'];
 const COLS = 12;
-const comp = loadComposer() || { n: 3, tool: 'H', grid: emptyGrid(3), challenge: null };
+const comp = loadComposer() || { n: 3, tool: 'H', grid: emptyGrid(3), challenge: CHALLENGES[0].id };
 function emptyGrid(n) { return Array.from({ length: n }, () => Array(COLS).fill(null)); }
 function loadComposer() {
   try { const c = JSON.parse(localStorage.getItem('ql-composer')); return c && c.grid?.length === c.n ? c : null; } catch { return null; }
@@ -254,18 +316,17 @@ function pickChallenge(id) {
 function renderChallenges() {
   const solved = G.state().arena;
   $('challenges').replaceChildren(
-    el('button', { type: 'button', role: 'listitem', class: 'chal' + (!comp.challenge ? ' on' : ''), onclick: () => pickChallenge(null) },
-      el('span', { class: 'chal-icon' }, '∞'), el('span', { class: 'chal-title' }, 'Free play'), el('span', { class: 'chal-goal' }, 'No target — just explore')),
     ...CHALLENGES.map((c) => el('button', {
       type: 'button', role: 'listitem', class: 'chal' + (comp.challenge === c.id ? ' on' : '') + (solved.includes(c.id) ? ' solved' : ''), onclick: () => pickChallenge(c.id),
-    }, el('span', { class: 'chal-icon' }, solved.includes(c.id) ? '✓' : `${c.n}q`), el('span', { class: 'chal-title' }, c.title),
-    el('span', { class: 'chal-goal' }, c.goal), el('span', { class: 'task-xp' }, `+${c.xp} XP`))));
+    }, el('span', { class: 'mark' }, solved.includes(c.id) ? '✓' : comp.challenge === c.id ? '●' : '○'), el('span', {}, c.title), el('span', { class: 'xp' }, `+${c.xp}`))),
+    el('button', { type: 'button', role: 'listitem', class: 'chal' + (!comp.challenge ? ' on' : ''), onclick: () => pickChallenge(null) },
+      el('span', { class: 'mark' }, '∞'), el('span', {}, 'Free play'), el('span', { class: 'xp' }, '')));
 }
 
 function renderComposer() {
   renderChallenges();
   $('palette').replaceChildren(...TOOLS.map((t) => el('button', {
-    type: 'button', class: 'tool' + (t === '⌫' ? ' erase' : ''), 'aria-pressed': comp.tool === t ? 'true' : 'false', disabled: !allowedTool(t),
+    type: 'button', class: 'tool', 'aria-pressed': comp.tool === t ? 'true' : 'false', disabled: !allowedTool(t),
     title: t === '⌫' ? 'Eraser' : t === '●' ? 'Control dot' : `${t} gate`, onclick: () => { comp.tool = t; renderComposer(); },
   }, t)));
 
@@ -297,14 +358,16 @@ function renderComposer() {
   }
   box.replaceChildren(...kids);
 
-  const preset = (name, cells) => el('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: () => {
-    comp.challenge = null; comp.grid = emptyGrid(comp.n); cells.forEach(([q, c, g]) => { if (q < comp.n) comp.grid[q][c] = g; }); update();
-  } }, name);
   const c = challenge();
+  const preset = (name, cells) => el('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: () => {
+    comp.grid = emptyGrid(comp.n); cells.forEach(([q, col, g]) => { if (q < comp.n) comp.grid[q][col] = g; }); update();
+  } }, name);
   $('composer-actions').replaceChildren(
-    el('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: () => resize(1), disabled: !!c || comp.n >= 6 }, '+ qubit'),
-    el('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: () => resize(-1), disabled: !!c || comp.n <= 1 }, '− qubit'),
-    ...(c ? [] : [preset('Bell pair', [[0, 0, 'H'], [0, 1, '●'], [1, 1, 'X']]), preset('GHZ', [[0, 0, 'H'], [0, 1, '●'], [1, 1, 'X'], [1, 2, '●'], [2, 2, 'X']])]),
+    ...(c ? [] : [
+      el('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: () => resize(1), disabled: comp.n >= 6 }, '+ qubit'),
+      el('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: () => resize(-1), disabled: comp.n <= 1 }, '− qubit'),
+      preset('Bell pair', [[0, 0, 'H'], [0, 1, '●'], [1, 1, 'X']]),
+      preset('GHZ', [[0, 0, 'H'], [0, 1, '●'], [1, 1, 'X'], [1, 2, '●'], [2, 2, 'X']])]),
     el('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: () => { comp.grid = emptyGrid(comp.n); update(); } }, 'Clear'));
   renderState();
 }
@@ -325,36 +388,35 @@ function renderState() {
     if (p < 1e-9) continue;
     const ang = (Math.atan2(s.im[i], s.re[i]) * 180) / Math.PI;
     rows.push(el('div', { class: 'sv-row' },
-      el('span', { class: 'sv-k' }, `|${i.toString(2).padStart(comp.n, '0')}⟩`),
-      el('span', { class: 'sv-bar' }, el('span', { style: `width:${p * 100}%;background:hsl(${(170 + ang + 360) % 360} 75% 65%)` })),
+      el('span', {}, `|${i.toString(2).padStart(comp.n, '0')}⟩`),
+      el('span', { class: 'sv-bar' }, el('span', { style: `width:${p * 100}%;background:hsl(${(220 + ang + 360) % 360} 70% 55%)` })),
       el('span', { class: 'sv-v' }, `${(p * 100).toFixed(1)}% ∠${ang.toFixed(0)}°`)));
   }
   $('statevec').replaceChildren(el('div', { class: 'sv' }, ...rows.slice(0, 32)),
     el('div', { class: 'sv-note' }, `Bar = probability · colour and angle = phase. Basis states read q${comp.n - 1} … q0. Right-click a cell to erase.`));
 
   const c = challenge();
-  if (!c) { $('goal').replaceChildren(); $('goal').hidden = true; return; }
+  if (!c) {
+    $('goal').replaceChildren(el('p', { class: 'eyebrow' }, 'Free play'), el('div', { class: 'goal-text' }, 'Build anything.'));
+    return;
+  }
   // overlap with the target, ignoring global phase
   let re = 0, im = 0;
   for (const [k, tr, ti] of c.target) { re += tr * s.re[k] + ti * s.im[k]; im += tr * s.im[k] - ti * s.re[k]; }
   const match = re * re + im * im;
-  const used = new Set(comp.grid.flat().filter(Boolean));
-  const legal = !c.allowed || [...used].every((g) => c.allowed.includes(g));
+  const legal = !c.allowed || comp.grid.flat().filter(Boolean).every((g) => c.allowed.includes(g));
   const solved = match > 0.999 && legal;
-  if (solved) G.completeChallenge(c);
-  $('goal').hidden = false;
+  if (solved && G.completeChallenge(c)) renderChallenges();
   $('goal').replaceChildren(
-    el('div', { class: 'goal-head' }, el('span', { class: 'field-label' }, `Challenge · ${c.title}`), el('span', { class: 'task-xp' }, `+${c.xp} XP`)),
+    el('p', { class: 'eyebrow' }, `Puzzle · ${c.title} · +${c.xp} XP`),
     el('div', { class: 'goal-text' }, c.goal),
     el('div', { class: 'meter' + (solved ? ' ok' : '') }, el('span', { style: `width:${match * 100}%` })),
-    el('div', { class: 'note' }, solved ? '✓ Solved! Pick another puzzle above.' : !legal ? `Only ${c.allowed.join(' and ')} gates are allowed here.` : `Match with target: ${(match * 100).toFixed(0)}%`));
-  if (solved) renderChallenges();
+    el('div', { class: 'note' }, solved ? '✓ Solved — pick another puzzle.' : !legal ? `Only ${c.allowed.join(' and ')} gates are allowed here.` : `Match with target: ${(match * 100).toFixed(0)}%`));
 }
 
 // ============================================================ boot
-G.onChange(() => { renderHud(); renderQuest(); });
+G.onChange(() => { renderHud(); if (!$('view-course').hidden) renderCourse(); });
 renderHud();
-const deepLink = location.hash.match(/^#lab\/(\w+)/)?.[1];
-openLab(deepLink ?? G.nextUp(), false);
-renderComposer();
-if (deepLink) $('lab').scrollIntoView();
+// old links (#lab/<id>) still work
+if (/^#lab\//.test(location.hash)) history.replaceState(null, '', '#/' + location.hash.slice(1));
+route();
