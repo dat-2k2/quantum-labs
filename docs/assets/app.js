@@ -34,6 +34,7 @@ const go = (hash) => { if (location.hash === hash) route(); else location.hash =
 function renderHud() {
   const lv = G.level();
   $('hud').textContent = `${G.state().xp} XP · Level ${lv.i}`;
+  $('hud').title = lv.name;
 }
 
 let lockOpen = null;
@@ -81,21 +82,23 @@ function renderCourse() {
   const labsDone = G.ORDER.filter(G.labComplete).length;
   const missions = G.ORDER.reduce((a, id) => a + G.doneList(id).length, 0);
   const totalMissions = G.ORDER.reduce((a, id) => a + G.labTotal(id), 0);
+  $('strip').textContent = `${labsDone}/${G.ORDER.length} labs · ${missions}/${totalMissions} missions · badges ${st.badges.length}/${G.ALL_BADGES.length}`;
   $('side').replaceChildren(
+    el('div', { class: 'label' }, 'Your progress'),
     el('div', { class: 'side-level' },
-      el('div', { class: 'field-label' }, `Level ${lv.i}`), el('div', { class: 'name' }, lv.name),
+      el('div', { class: 'name' }, `Level ${lv.i} · ${lv.name}`),
       el('div', { class: 'meter' }, el('span', { style: `width:${lv.pct * 100}%` })),
       el('div', { class: 'mono-sm' }, lv.next ? `${st.xp} / ${lv.next} XP to ${lv.nextName}` : `${st.xp} XP — top level`)),
     el('dl', { class: 'stats' }, ...[
       ['Labs completed', `${labsDone} / ${G.ORDER.length}`], ['Missions', `${missions} / ${totalMissions}`],
       ['Badges', `${st.badges.length} / ${G.ALL_BADGES.length}`], ['Arena puzzles', `${st.arena.length} / ${CHALLENGES.length}`],
     ].map(([k, v]) => el('div', {}, el('dt', {}, k), el('dd', {}, v)))),
-    el('div', { class: 'side-level' }, el('div', { class: 'field-label' }, 'Badges'),
-      el('div', { class: 'badge-list' }, ...G.ALL_BADGES.map((id) => {
+    el('div', { class: 'side-level' }, el('div', { class: 'field-label' }, `Badges · ${st.badges.length}/${G.ALL_BADGES.length}`),
+      el('div', { class: 'medals' }, ...G.ALL_BADGES.map((id) => {
         const [emoji, name] = G.badgeInfo(id), got = st.badges.includes(id);
-        return el('span', { class: 'badge' + (got ? ' got' : ''), title: got ? name : `${name} — locked`, 'aria-label': got ? name : `${name} (locked)` }, emoji);
+        return el('span', { class: 'medal' + (got ? ' got' : ''), title: got ? name : `${name} — locked`, 'aria-label': got ? name : `${name} (locked)` }, emoji);
       }))),
-    el('button', { type: 'button', class: 'reset', onclick: () => { if (confirm('Reset all XP, missions and badges?')) { G.reset(); renderCourse(); } } }, 'Reset progress'));
+    el('button', { type: 'button', class: 'link-btn reset', onclick: () => { if (confirm('Reset all XP, missions and badges?')) { G.reset(); renderCourse(); } } }, 'Reset progress'));
 }
 
 // ============================================================ lesson
@@ -119,7 +122,16 @@ function openLab(id) {
   renderWorkspace();
 }
 
+function showToc(on) {
+  document.body.classList.toggle('show-toc', on);
+  $('seg-toc').setAttribute('aria-pressed', String(on));
+  $('seg-step').setAttribute('aria-pressed', String(!on));
+}
+$('seg-toc').addEventListener('click', () => showToc(true));
+$('seg-step').addEventListener('click', () => showToc(false));
+
 function goStep(i) {
+  showToc(false);
   current.step = Math.max(0, Math.min(current.steps.length - 1, i));
   current.sel = null; current.wrong = false;
   renderStep();
@@ -159,15 +171,16 @@ function renderStep() {
   const actions = steps.filter((x) => x.type === 'mission');
   const quizzes = steps.filter((x) => x.type === 'quiz');
 
+  const stepLabel = (x) => x.type === 'learn' ? 'Lesson' : x.type === 'done' ? 'Summary'
+    : x.type === 'quiz' ? `Quiz ${quizzes.indexOf(x) + 1}` : `Mission ${actions.indexOf(x) + 1}`;
   // top bar
   $('segs').replaceChildren(...steps.slice(0, -1).map((x, i) => el('span', {
     class: stepDone(x) ? 'on' : i === step ? 'here' : '',
   })));
-  $('lxp').textContent = `⚡ ${G.state().xp}`;
+  $('lxp').textContent = `⚡ ${G.state().xp} XP`;
+  $('seg-step').textContent = stepLabel(s);
 
   // contents
-  const stepLabel = (x) => x.type === 'learn' ? 'Lesson' : x.type === 'done' ? 'Summary'
-    : x.type === 'quiz' ? `Quiz ${quizzes.indexOf(x) + 1}` : `Mission ${actions.indexOf(x) + 1}`;
   const nextId = G.ORDER[G.ORDER.indexOf(lab.id) + 1];
   $('toc').replaceChildren(
     el('p', { class: 'eyebrow' }, `${String(ci + 1).padStart(2, '0')} · ${CHAPTERS[ci].name}`),

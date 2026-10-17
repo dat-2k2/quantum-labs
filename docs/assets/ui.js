@@ -16,7 +16,7 @@ const field = (label, ...body) => el('div', { class: 'field' }, el('div', { clas
 
 export function slider(label, { min, max, step = 1, value, format = (v) => v, onInput }) {
   const out = el('span', { class: 'field-value' }, format(value));
-  const input = el('input', { type: 'range', min, max, step, value });
+  const input = el('input', { type: 'range', min, max, step, value, 'aria-label': typeof label === 'string' ? label : 'value' });
   const paint = () => input.style.setProperty('--p', `${((input.value - min) / (max - min)) * 100}%`);
   paint();
   input.addEventListener('input', () => { const v = Number(input.value); out.textContent = format(v); paint(); onInput(v); });
