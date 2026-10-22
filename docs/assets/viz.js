@@ -1,5 +1,7 @@
 // SVG / HTML renderers: circuits, histograms, amplitude bars, Bloch spheres, line charts.
 
+import { t, lang } from './i18n.js';
+
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 // ---------- Circuit diagram ----------
@@ -89,23 +91,23 @@ function drawOp(op, cx, colW, y, n) {
     s += `<text class="c-glabel c-block-t" x="${cx}" y="${top + h / 2 + 5}" text-anchor="middle">${esc(opLabel(op))}</text>`;
     return s;
   }
-  const t = op.t[0];
+  const tq = op.t[0];
   if (op.g === 'SWAP') {
     for (const q of op.t) s += `<path class="c-swap" d="M${cx - 7} ${y(q) - 7}l14 14M${cx + 7} ${y(q) - 7}l-14 14"/>`;
     return s;
   }
   if (op.g === 'X' && c.length) {
-    return s + `<circle class="c-target" cx="${cx}" cy="${y(t)}" r="13"/><path class="c-target-x" d="M${cx} ${y(t) - 13}v26M${cx - 13} ${y(t)}h26"/>`;
+    return s + `<circle class="c-target" cx="${cx}" cy="${y(tq)}" r="13"/><path class="c-target-x" d="M${cx} ${y(tq) - 13}v26M${cx - 13} ${y(tq)}h26"/>`;
   }
-  if (op.g === 'Z' && c.length) return s + `<circle class="c-ctrl" cx="${cx}" cy="${y(t)}" r="5.5"/>`;
+  if (op.g === 'Z' && c.length) return s + `<circle class="c-ctrl" cx="${cx}" cy="${y(tq)}" r="5.5"/>`;
   if (op.g === 'M') {
-    s += box(cx, y(t), GATE, GATE, '', 'c-meas');
-    s += `<path class="c-meas-icon" d="M${cx - 9} ${y(t) + 6}a9 9 0 0 1 18 0M${cx} ${y(t) + 6}l6 -9"/>`;
+    s += box(cx, y(tq), GATE, GATE, '', 'c-meas');
+    s += `<path class="c-meas-icon" d="M${cx - 9} ${y(tq) + 6}a9 9 0 0 1 18 0M${cx} ${y(tq) + 6}l6 -9"/>`;
     return s;
   }
   const w = Math.max(GATE, textWidth(opLabel(op)));
   const cls = op.err ? 'c-err' : op.g === 'INIT' ? 'c-init' : 'c-gate';
-  return s + box(cx, y(t), w, GATE, opLabel(op), cls);
+  return s + box(cx, y(tq), w, GATE, opLabel(op), cls);
 }
 
 // ---------- Histogram (horizontal bars) ----------
@@ -124,9 +126,9 @@ export function histogram(counts, { total, highlight = () => false, sort = 'coun
       + `<span class="hist-bar"><span style="width:${(100 * v) / max}%"></span></span>`
       + `<span class="hist-v">${v}</span></div>`;
   }
-  if (hidden > 0) h += `<div class="hist-more">+ ${hidden} more outcomes</div>`;
+  if (hidden > 0) h += `<div class="hist-more">${esc(t('+ {n} more outcomes', { n: hidden }))}</div>`;
   if (note) h += `<div class="hist-more">${esc(note)}</div>`;
-  return h + `</div><div class="hist-total">${sum.toLocaleString()} shots</div>`;
+  return h + `</div><div class="hist-total">${esc(t('{n} shots', { n: sum.toLocaleString(lang) }))}</div>`;
 }
 
 // ---------- Vertical amplitude bars ----------

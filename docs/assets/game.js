@@ -2,6 +2,7 @@
 
 import { MISSIONS, LAB_BADGES, SPECIAL_BADGES, CHALLENGES, LEVELS, CHAPTERS } from './missions.js';
 import { el } from './ui.js';
+import { t } from './i18n.js';
 
 const KEY = 'ql-progress-v1';
 const LAB_BONUS = 50;
@@ -58,7 +59,7 @@ function addXp(n) {
   P.xp += n;
   const after = level();
   if (after.i > before) {
-    toast(`Level ${after.i}`, `You are now a <b>${after.name}</b>`, 'level');
+    toast(t('Level {i}', { i: after.i }), t('You are now a <b>{name}</b>', { name: after.name }), 'level');
   }
 }
 
@@ -71,7 +72,7 @@ function award(id) {
   if (P.badges.includes(id)) return;
   P.badges.push(id);
   const [emoji, name] = badgeInfo(id);
-  toast(emoji, `Badge unlocked: <b>${name}</b>`, 'badge');
+  toast(emoji, t('Badge unlocked: <b>{name}</b>', { name }), 'badge');
 }
 
 // Mark a mission done; returns true if this call completed it.
@@ -79,13 +80,13 @@ export function complete(lab, m, { firstTry, quiet } = {}) {
   if (isDone(lab, m.id)) return false;
   (P.done[lab] ||= []).push(m.id);
   const xp = reward(lab, m);
-  if (!quiet) toast(`+${xp} XP`, m.quiz ? 'Correct!' : `Mission complete — ${m.text}`, 'xp');
+  if (!quiet) toast(`+${xp} XP`, m.quiz ? t('Correct!') : t('Mission complete — {text}', { text: m.text }), 'xp');
   addXp(xp);
   if (!P.badges.includes('first')) award('first');
   if (m.badge) award(m.badge);
   if (m.quiz && firstTry && ++P.firstTry >= 5) award('sharp');
   if (labComplete(lab)) {
-    toast('★★★', `Lab complete! +${LAB_BONUS} XP bonus`, 'level');
+    toast('★★★', t('Lab complete! +{xp} XP bonus', { xp: LAB_BONUS }), 'level');
     addXp(LAB_BONUS);
     award(lab);
   }
@@ -100,7 +101,7 @@ export function completeChallenge(c) {
   // returns true only the first time a puzzle is solved
   if (P.arena.includes(c.id)) return false;
   P.arena.push(c.id);
-  toast(`+${c.xp} XP`, `Challenge solved — ${c.title}`, 'xp');
+  toast(`+${c.xp} XP`, t('Challenge solved — {title}', { title: c.title }), 'xp');
   addXp(c.xp);
   if (P.arena.length === CHALLENGES.length) award('arena');
   save();
@@ -111,9 +112,9 @@ export function completeChallenge(c) {
 let toastBox;
 export function toast(big, small, kind = 'xp') {
   toastBox ??= document.body.appendChild(el('div', { class: 'toasts', 'aria-live': 'polite' }));
-  const t = el('div', { class: `toast toast-${kind}` }, el('span', { class: 'toast-big' }, big), el('span', { class: 'toast-small', html: small }));
-  toastBox.append(t);
-  setTimeout(() => t.classList.add('out'), 3200);
-  setTimeout(() => t.remove(), 3700);
+  const node = el('div', { class: `toast toast-${kind}` }, el('span', { class: 'toast-big' }, big), el('span', { class: 'toast-small', html: small }));
+  toastBox.append(node);
+  setTimeout(() => node.classList.add('out'), 3200);
+  setTimeout(() => node.remove(), 3700);
 }
 

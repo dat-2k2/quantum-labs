@@ -17,10 +17,11 @@
     <div class="wrap nav-inner">
       <a class="logo" href="#/"><span class="logo-mark">|ψ⟩</span> Quantum Labs</a>
       <nav class="links" aria-label="Main">
-        <a href="#/" data-route="course">Course</a>
-        <a href="#/arena" data-route="arena">Arena</a>
+        <a href="#/" data-route="course" data-i18n>Course</a>
+        <a href="#/arena" data-route="arena" data-i18n>Arena</a>
         <a href="https://github.com/dat-2k2/quantum-labs" target="_blank" rel="noopener">GitHub ↗</a>
         <a class="hud" id="hud" href="#/"></a>
+        <button type="button" class="lang-switch link-btn"></button>
       </nav>
     </div>
   </header>
@@ -29,37 +30,37 @@
   <main id="view-course" class="view wrap course" hidden>
     <div class="course-main">
       <section class="intro">
-        <h1>Quantum algorithms,<br>hands on.</h1>
-        <p class="lead">Eleven labs from my quantum computing coursework. Each one is a short lesson, a few missions on a live circuit, and a quiz.</p>
+        <h1 data-i18n>Quantum algorithms,<br>hands on.</h1>
+        <p class="lead" data-i18n>Eleven labs from my quantum computing coursework. Each one is a short lesson, a few missions on a live circuit, and a quiz.</p>
         <a class="btn btn-primary" id="cta" href="#/">Start</a>
       </section>
       <div id="chapters"></div>
     </div>
-    <aside class="course-side" id="side" aria-label="Your progress"></aside>
+    <aside class="course-side" id="side" aria-label="Your progress" data-i18n-attr="aria-label"></aside>
   </main>
 
   <!-- ============ Lesson (focus mode) ============ -->
   <div id="view-lesson" class="view lesson-view" hidden>
     <header class="ltop">
-      <a class="close" href="#/" aria-label="Back to course">✕</a>
+      <a class="close" href="#/" aria-label="Back to course" data-i18n-attr="aria-label">✕</a>
       <div class="segs" id="segs" aria-hidden="true"></div>
       <span class="lxp" id="lxp"></span>
     </header>
     <div class="lbody">
-      <nav class="toc" id="toc" aria-label="Lesson contents"></nav>
+      <nav class="toc" id="toc" aria-label="Lesson contents" data-i18n-attr="aria-label"></nav>
       <main class="stage" id="stage">
         <p class="eyebrow" id="s-eyebrow"></p>
         <h1 class="s-title" id="s-title"></h1>
         <div id="s-body"></div>
         <div class="ws" id="ws">
-          <div class="ws-controls" id="controls" aria-label="Controls"></div>
+          <div class="ws-controls" id="controls" aria-label="Controls" data-i18n-attr="aria-label"></div>
           <div class="ws-main">
             <div class="circuit-head">
               <span class="field-label" id="circuit-tag"></span>
-              <button class="link-btn" id="run" type="button" title="Run again (Ctrl/⌘ + Enter)">Run again <kbd>⌘↵</kbd></button>
+              <button class="link-btn" id="run" type="button" title="Run again (Ctrl/⌘ + Enter)" data-i18n-attr="title"><span data-i18n>Run again</span> <kbd>⌘↵</kbd></button>
             </div>
             <div class="circuit-canvas" id="circuit"></div>
-            <div class="results" id="results" aria-live="polite"></div>
+            <div class="results" id="results" aria-live="polite" aria-label="Results" data-i18n-attr="aria-label"></div>
           </div>
           <div class="extra" id="extra" hidden></div>
         </div>
@@ -71,25 +72,26 @@
   <!-- ============ Arena ============ -->
   <main id="view-arena" class="view wrap arena" hidden>
     <aside class="arena-list">
-      <p class="eyebrow">Arena</p>
-      <h2>Circuit puzzles</h2>
-      <p class="muted small">Build the target state. A ● in a column controls the other gates in it.</p>
+      <p class="eyebrow" data-i18n>Arena</p>
+      <h2 data-i18n>Circuit puzzles</h2>
+      <p class="muted small" data-i18n>Build the target state. A ● in a column controls the other gates in it.</p>
       <div id="challenges" role="list"></div>
     </aside>
     <section class="arena-stage">
       <div class="goal" id="goal"></div>
-      <div class="palette" id="palette" role="toolbar" aria-label="Gate palette"></div>
+      <div class="palette" id="palette" role="toolbar" aria-label="Gate palette" data-i18n-attr="aria-label"></div>
       <div class="scroll-x"><div class="composer" id="composer"></div></div>
       <div class="row-controls" id="composer-actions"></div>
-      <h3 class="sv-title">State vector</h3>
+      <h3 class="sv-title" data-i18n>State vector</h3>
       <div id="statevec"></div>
     </section>
   </main>
 
   <footer class="footer" id="footer">
     <div class="wrap footer-inner">
-      <span>|ψ⟩ Quantum Labs — coursework by Đạt Nguyễn</span>
-      <span>Progress is saved in this browser · notebooks on <a href="https://github.com/dat-2k2/quantum-labs" target="_blank" rel="noopener">GitHub</a></span>
+      <span data-i18n>|ψ⟩ Quantum Labs — coursework by Đạt Nguyễn</span>
+      <span data-i18n>Progress is saved in this browser · notebooks on <a href="https://github.com/dat-2k2/quantum-labs" target="_blank" rel="noopener">GitHub</a></span>
+      <button type="button" class="lang-switch link-btn"></button>
     </div>
   </footer>
 

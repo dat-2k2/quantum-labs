@@ -7,6 +7,7 @@
 import { State, run, applyOp, qftOps, inverse, sampleDist, ryGate, phaseGate, gcd, lcm, modpow, toBits, limitDenominator } from './sim.js';
 import { histogram, ampBars, phaseWheels, bloch, lineChart } from './viz.js';
 import { el, slider, bits, segmented, toggle, button, shotsControl, verdict } from './ui.js';
+import { t } from './i18n.js';
 
 const range = (n, from = 0) => Array.from({ length: n }, (_, i) => i + from);
 const Hs = (qs) => qs.map((q) => ({ g: 'H', t: [q] }));
@@ -29,9 +30,9 @@ const qrng = {
   ],
   init: () => ({ n: 4, shots: 1000 }),
   controls: (st, set) => [
-    slider('Qubits n', { min: 1, max: 8, value: st.n, onInput: (n) => set({ n }) }),
+    slider(t('Qubits n'), { min: 1, max: 8, value: st.n, onInput: (n) => set({ n }) }),
     shotsControl(st.shots, (shots) => set({ shots })),
-    button('▶  Roll again', () => set({})),
+    button(t('▶  Roll again'), () => set({})),
   ],
   compute(st) {
     const qs = range(st.n);
@@ -42,9 +43,9 @@ const qrng = {
     return {
       n: st.n, ops,
       results: [
-        verdict('Your random number', `${parseInt(one, 2)}`, `binary ${one} · range 0 – ${2 ** st.n - 1}`),
+        verdict(t('Your random number'), `${parseInt(one, 2)}`, t('binary {b} · range 0 – {max}', { b: one, max: 2 ** st.n - 1 })),
         html(histogram(counts, { sort: 'key', limit: 16, label: (k) => `${k}  (${parseInt(k, 2)})` })),
-        note(`Ideal: each of the ${2 ** st.n} outcomes appears ≈ ${(st.shots / 2 ** st.n).toFixed(1)} times.`),
+        note(t('Ideal: each of the {N} outcomes appears ≈ {avg} times.', { N: 2 ** st.n, avg: (st.shots / 2 ** st.n).toFixed(1) })),
       ],
       facts: { n: st.n, number: parseInt(one, 2) },
     };
@@ -73,17 +74,17 @@ const deutschJozsa = {
   init: () => ({ n: 3, kind: 'balanced', mask: 0b101, shots: 1000, expand: true, mystery: null, reveal: false }),
   controls(st, set) {
     const nodes = [
-      slider('Input qubits n', { min: 1, max: 6, value: st.n, onInput: (n) => set({ n, mask: Math.min(st.mask, 2 ** n - 1) || 1, mystery: st.mystery && randomDJ(n), reveal: false }) }),
-      segmented('Oracle f', {
-        options: [['const0', 'f = 0'], ['const1', 'f = 1'], ['balanced', 'Balanced'], ['mystery', '?']],
+      slider(t('Input qubits n'), { min: 1, max: 6, value: st.n, onInput: (n) => set({ n, mask: Math.min(st.mask, 2 ** n - 1) || 1, mystery: st.mystery && randomDJ(n), reveal: false }) }),
+      segmented(t('Oracle f'), {
+        options: [['const0', 'f = 0'], ['const1', 'f = 1'], ['balanced', t('Balanced')], ['mystery', '?']],
         value: st.kind, onChange: (kind) => set({ kind, mystery: kind === 'mystery' ? randomDJ(st.n) : null, reveal: false }),
       }),
     ];
-    if (st.kind === 'balanced') nodes.push(bits('Balanced mask  f(x) = mask·x', { n: st.n, value: st.mask, onChange: (m) => m && set({ mask: m }) }));
-    if (st.kind === 'mystery') nodes.push(button('↻  New mystery oracle', () => set({ mystery: randomDJ(st.n), reveal: false }), 'ghost'));
+    if (st.kind === 'balanced') nodes.push(bits(t('Balanced mask  f(x) = mask·x'), { n: st.n, value: st.mask, onChange: (m) => m && set({ mask: m }) }));
+    if (st.kind === 'mystery') nodes.push(button(t('↻  New mystery oracle'), () => set({ mystery: randomDJ(st.n), reveal: false }), 'ghost'));
     nodes.push(shotsControl(st.shots, (shots) => set({ shots })));
-    if (st.kind !== 'mystery' || st.reveal) nodes.push(toggle('Show inside the oracle', { value: st.expand, onChange: (expand) => set({ expand }) }));
-    nodes.push(button('▶  Run circuit', () => set({})));
+    if (st.kind !== 'mystery' || st.reveal) nodes.push(toggle(t('Show inside the oracle'), { value: st.expand, onChange: (expand) => set({ expand }) }));
+    nodes.push(button(t('▶  Run circuit'), () => set({})));
     return nodes;
   },
   compute(st, set) {
@@ -95,13 +96,13 @@ const deutschJozsa = {
     const counts = run(n + 1, ops).sample(qs, st.shots);
     const zero = '0'.repeat(n);
     const constant = (counts.get(zero) || 0) === st.shots;
-    const name = { const0: 'f(x) = 0', const1: 'f(x) = 1', balanced: `balanced, mask ${toBits(o.mask, n)}` }[o.kind];
+    const name = { const0: 'f(x) = 0', const1: 'f(x) = 1', balanced: t('balanced, mask {m}', { m: toBits(o.mask, n) }) }[o.kind];
     const results = [
       html(histogram(counts, { highlight: (k) => k === zero })),
-      verdict('Verdict after 1 query', constant ? 'CONSTANT' : 'BALANCED',
-        `P(|${zero}⟩) = ${((counts.get(zero) || 0) / st.shots).toFixed(2)} · a classical computer may need ${2 ** (n - 1) + 1} queries`),
+      verdict(t('Verdict after 1 query'), constant ? t('CONSTANT') : t('BALANCED'),
+        t('P(|{z}⟩) = {p} · a classical computer may need {q} queries', { z: zero, p: ((counts.get(zero) || 0) / st.shots).toFixed(2), q: 2 ** (n - 1) + 1 })),
     ];
-    if (st.kind === 'mystery') results.push(st.reveal ? note(`The oracle was <b>${name}</b>.`) : button('Reveal the oracle', () => set({ reveal: true }), 'ghost'));
+    if (st.kind === 'mystery') results.push(st.reveal ? note(t('The oracle was <b>{name}</b>.', { name })) : button(t('Reveal the oracle'), () => set({ reveal: true }), 'ghost'));
     return { n: n + 1, ops, expand: st.expand && !hidden, wireLabels: [...qs.map((q) => `q${q}`), 'anc'], results,
       facts: { n, kind: st.kind, mask: st.mask, constant, reveal: st.reveal } };
   },
@@ -119,11 +120,11 @@ const bernsteinVazirani = {
   ],
   init: () => ({ n: 6, s: 0b011010, shots: 1000, expand: true }),
   controls: (st, set) => [
-    slider('Qubits n', { min: 1, max: 9, value: st.n, onInput: (n) => set({ n, s: st.s & (2 ** n - 1) }) }),
-    bits('Secret s', { n: st.n, value: st.s, onChange: (s) => set({ s }) }),
+    slider(t('Qubits n'), { min: 1, max: 9, value: st.n, onInput: (n) => set({ n, s: st.s & (2 ** n - 1) }) }),
+    bits(t('Secret s'), { n: st.n, value: st.s, onChange: (s) => set({ s }) }),
     shotsControl(st.shots, (shots) => set({ shots })),
-    toggle('Show inside the oracle', { value: st.expand, onChange: (expand) => set({ expand }) }),
-    button('▶  Run circuit', () => set({})),
+    toggle(t('Show inside the oracle'), { value: st.expand, onChange: (expand) => set({ expand }) }),
+    button(t('▶  Run circuit'), () => set({})),
   ],
   compute(st) {
     const n = st.n, qs = range(n);
@@ -136,7 +137,7 @@ const bernsteinVazirani = {
       n: n + 1, ops, expand: st.expand, wireLabels: [...qs.map((q) => `q${q}`), 'anc'],
       results: [
         html(histogram(counts, { highlight: (k) => k === secret })),
-        verdict('Recovered secret', `s = ${best}  ${best === secret ? '✓' : '✗'}`, `1 oracle query vs ${n} classically`),
+        verdict(t('Recovered secret'), `s = ${best}  ${best === secret ? '✓' : '✗'}`, t('1 oracle query vs {n} classically', { n })),
       ],
       facts: { n, s: st.s, recovered: best === secret, expand: st.expand },
     };
@@ -163,11 +164,11 @@ const simon = {
   ],
   init: () => ({ n: 3, b: 0b110, shots: 100, expand: true }),
   controls: (st, set) => [
-    slider('Qubits per register n', { min: 2, max: 5, value: st.n, onInput: (n) => set({ n, b: st.b & (2 ** n - 1) }) }),
-    bits('Hidden period b', { n: st.n, value: st.b, onChange: (b) => set({ b }) }),
-    segmented('Shots', { options: [[10, '10'], [100, '100'], [1000, '1 000']], value: st.shots, onChange: (shots) => set({ shots }) }),
-    toggle('Show inside the oracle', { value: st.expand, onChange: (expand) => set({ expand }) }),
-    button('▶  Run circuit', () => set({})),
+    slider(t('Qubits per register n'), { min: 2, max: 5, value: st.n, onInput: (n) => set({ n, b: st.b & (2 ** n - 1) }) }),
+    bits(t('Hidden period b'), { n: st.n, value: st.b, onChange: (b) => set({ b }) }),
+    segmented(t('Shots'), { options: [[10, '10'], [100, '100'], [1000, '1 000']], value: st.shots, onChange: (shots) => set({ shots }) }),
+    toggle(t('Show inside the oracle'), { value: st.expand, onChange: (expand) => set({ expand }) }),
+    button(t('▶  Run circuit'), () => set({})),
   ],
   compute(st) {
     const n = st.n, qs = range(n);
@@ -175,17 +176,17 @@ const simon = {
     const counts = run(2 * n, ops).sample(qs, st.shots);
     const ys = [...counts.keys()].map((k) => parseInt(k, 2)).filter((y) => y);
     const cands = range(2 ** n - 1, 1).filter((c) => ys.every((y) => !dot2(y, c)));
-    const eqs = ys.sort((a, b) => a - b).map((y) => `${toBits(y, n)} · b = 0`).join('<br>') || '(only y = 0 measured)';
+    const eqs = ys.sort((a, b) => a - b).map((y) => `${toBits(y, n)} · b = 0`).join('<br>') || t('(only y = 0 measured)');
     let main, sub;
-    if (cands.length === 1) { main = `b = ${toBits(cands[0], n)}  ${cands[0] === st.b ? '✓' : '✗'}`; sub = 'unique non-zero solution of the system'; }
-    else if (cands.length === 0) { main = `b = ${'0'.repeat(n)}`; sub = 'only b = 0 satisfies every equation → f is one-to-one'; }
-    else { main = `${cands.length} candidates`; sub = 'not enough independent equations yet — run again or add shots'; }
+    if (cands.length === 1) { main = `b = ${toBits(cands[0], n)}  ${cands[0] === st.b ? '✓' : '✗'}`; sub = t('unique non-zero solution of the system'); }
+    else if (cands.length === 0) { main = `b = ${'0'.repeat(n)}`; sub = t('only b = 0 satisfies every equation → f is one-to-one'); }
+    else { main = t('{c} candidates', { c: cands.length }); sub = t('not enough independent equations yet — run again or add shots'); }
     return {
       n: 2 * n, ops, expand: st.expand, wireLabels: [...qs.map((q) => `x${q}`), ...qs.map((q) => `f${q}`)],
       results: [
         html(histogram(counts, { sort: 'key', highlight: (k) => !dot2(parseInt(k, 2), st.b) })),
-        el('div', { class: 'eqs' }, el('div', { class: 'field-label' }, 'Equations over GF(2)'), html(`<code>${eqs}</code>`)),
-        verdict('Solved period', main, sub, cands.length > 1 ? 'warn' : 'ok'),
+        el('div', { class: 'eqs' }, el('div', { class: 'field-label' }, t('Equations over GF(2)')), html(`<code>${eqs}</code>`)),
+        verdict(t('Solved period'), main, sub, cands.length > 1 ? 'warn' : 'ok'),
       ],
       facts: { n, b: st.b, shots: st.shots, solved: cands.length === 1 && cands[0] === st.b, zeroCase: st.b === 0 && cands.length === 0 },
     };
@@ -229,11 +230,11 @@ const grover = {
       }, String(i)));
     }
     return [
-      slider('Qubits n', { min: 2, max: 6, value: st.n, onInput: (n) => set({ n, marked: st.marked.filter((x) => x < 2 ** n).length ? st.marked.filter((x) => x < 2 ** n) : [2 ** n - 1], k: null }) }),
-      el('div', { class: 'field' }, el('div', { class: 'field-label' }, 'Marked items ω  (click to toggle)'), grid),
-      slider('Iterations k', { min: 0, max: Math.max(2 * kOpt + 2, 3), value: k, format: (v) => `${v}${v === kOpt ? '  (optimal)' : ''}`, onInput: (v) => set({ k: v }) }),
+      slider(t('Qubits n'), { min: 2, max: 6, value: st.n, onInput: (n) => set({ n, marked: st.marked.filter((x) => x < 2 ** n).length ? st.marked.filter((x) => x < 2 ** n) : [2 ** n - 1], k: null }) }),
+      el('div', { class: 'field' }, el('div', { class: 'field-label' }, t('Marked items ω'), el('span', { class: 'hint' }, `  (${t('click to toggle')})`)), grid),
+      slider(t('Iterations k'), { min: 0, max: Math.max(2 * kOpt + 2, 3), value: k, format: (v) => (v === kOpt ? t('{v}  (optimal)', { v }) : String(v)), onInput: (v) => set({ k: v }) }),
       shotsControl(st.shots, (shots) => set({ shots })),
-      button('▶  Run circuit', () => set({})),
+      button(t('▶  Run circuit'), () => set({})),
     ];
   },
   compute(st) {
@@ -251,19 +252,19 @@ const grover = {
     return {
       n, ops: [...ops, ...Ms(qs)],
       results: [
-        verdict(`After k = ${k} iteration${k === 1 ? '' : 's'}`, `P(success) = ${(pSucc * 100).toFixed(1)}%`,
-          `${st.marked.length} of ${N} marked · classical search needs ~${Math.ceil(N / (2 * st.marked.length))} tries on average`, pSucc > 0.5 ? 'ok' : 'warn'),
-        el('div', { class: 'field-label' }, 'Amplitudes (marked in cyan)'),
+        verdict(t(k === 1 ? 'After k = {k} iteration' : 'After k = {k} iterations', { k }), t('P(success) = {p}%', { p: (pSucc * 100).toFixed(1) }),
+          t('{M} of {N} marked · classical search needs ~{c} tries on average', { M: st.marked.length, N, c: Math.ceil(N / (2 * st.marked.length)) }), pSucc > 0.5 ? 'ok' : 'warn'),
+        el('div', { class: 'field-label' }, t('Amplitudes (marked items highlighted)')),
         html(ampBars(range(N).map((i) => ({ label: `|${toBits(i, n)}⟩`, value: sign * state.re[i], marked: marked.has(i) })), { yMax: 1 })),
         html(histogram(counts, { highlight: (key) => marked.has(parseInt(key, 2)), limit: 6 })),
       ],
       extra: [
-        el('h3', {}, 'Success probability vs. iterations'),
+        el('h3', {}, t('Success probability vs. iterations')),
         html(lineChart([
-          { name: 'P(success)', color: 'var(--cyan)', pts: curve },
+          { name: t('P(success)'), color: 'var(--cyan)', pts: curve },
           { name: 'current', color: 'var(--violet)', pts: [[k, 0], [k, 1]], dash: true },
-        ], { xLabel: 'iterations k', yLabel: 'P(success)', yMax: 1, xMax: curve.length - 1, width: 900, height: 260 })),
-        note('Grover’s algorithm overshoots: past the optimal k the amplitude rotates away from the marked state again.'),
+        ], { xLabel: t('iterations k'), yLabel: t('P(success)'), yMax: 1, xMax: curve.length - 1, width: 900, height: 260 })),
+        note(t('Grover’s algorithm overshoots: past the optimal k the amplitude rotates away from the marked state again.')),
       ],
       facts: { n, M: st.marked.length, k, kOpt, pSucc },
     };
@@ -291,11 +292,11 @@ const qft = {
   init: () => ({ n: 3, mode: 'basis', x: 5, input: null }),
   controls(st, set) {
     const nodes = [
-      slider('Qubits n', { min: 1, max: 6, value: st.n, onInput: (n) => set({ n, x: Math.min(st.x, 2 ** n - 1), input: st.mode === 'random' ? randomState(n) : null }) }),
-      segmented('Input', { options: [['basis', 'Basis |x⟩'], ['random', 'Random |ψ⟩']], value: st.mode, onChange: (mode) => set({ mode, input: mode === 'random' ? randomState(st.n) : null }) }),
+      slider(t('Qubits n'), { min: 1, max: 6, value: st.n, onInput: (n) => set({ n, x: Math.min(st.x, 2 ** n - 1), input: st.mode === 'random' ? randomState(n) : null }) }),
+      segmented(t('Input'), { options: [['basis', t('Basis |x⟩')], ['random', t('Random |ψ⟩')]], value: st.mode, onChange: (mode) => set({ mode, input: mode === 'random' ? randomState(st.n) : null }) }),
     ];
-    if (st.mode === 'basis') nodes.push(bits('x', { n: st.n, value: st.x, onChange: (x) => set({ x }) }));
-    else nodes.push(button('↻  New random state', () => set({ input: randomState(st.n) }), 'ghost'));
+    if (st.mode === 'basis') nodes.push(bits(t('x'), { n: st.n, value: st.x, onChange: (x) => set({ x }) }));
+    else nodes.push(button(t('↻  New random state'), () => set({ input: randomState(st.n) }), 'ghost'));
     return nodes;
   },
   compute(st) {
@@ -325,10 +326,10 @@ const qft = {
     return {
       n, ops: [...prep, BAR, ...q],
       results: [
-        el('div', { class: 'field-label' }, 'Input amplitudes'), html(phaseWheels(inAmps, n)),
-        el('div', { class: 'field-label' }, 'After QFT'), html(phaseWheels(range(N).map((i) => [s.re[i], s.im[i]]), n)),
-        verdict('Matches classical DFT', `max error ${err.toExponential(1)}  ${err < 1e-9 ? '✓' : '✗'}`, 'numpy: np.fft.ifft(ψ, norm="ortho")'),
-        note('Circle size = magnitude, hand + colour = phase. For a basis input every output has equal size and the phase advances by x·2π/N per step.'),
+        el('div', { class: 'field-label' }, t('Input amplitudes')), html(phaseWheels(inAmps, n)),
+        el('div', { class: 'field-label' }, t('After QFT')), html(phaseWheels(range(N).map((i) => [s.re[i], s.im[i]]), n)),
+        verdict(t('Matches classical DFT'), t('max error {e}  {mark}', { e: err.toExponential(1), mark: err < 1e-9 ? '✓' : '✗' }), 'numpy: np.fft.ifft(ψ, norm="ortho")'),
+        note(t('Circle size = magnitude, hand + colour = phase. For a basis input every output has equal size and the phase advances by x·2π/N per step.')),
       ],
       facts: { n, mode: st.mode, x: st.x, err },
     };
@@ -347,30 +348,30 @@ const phaseEstimation = {
   ],
   init: () => ({ t: 4, phi: 0.3, shots: 1000, expand: false }),
   controls: (st, set) => [
-    slider('Counting qubits t', { min: 1, max: 8, value: st.t, onInput: (t) => set({ t }) }),
-    slider('True phase φ', { min: 0, max: 0.999, step: 0.001, value: st.phi, format: (v) => v.toFixed(3), onInput: (phi) => set({ phi }) }),
-    segmented('Presets', { options: [[1 / 8, 'T  (1/8)'], [1 / 4, 'S  (1/4)'], [1 / 3, '1/3']], value: st.phi, onChange: (phi) => set({ phi }) }),
+    slider(t('Counting qubits t'), { min: 1, max: 8, value: st.t, onInput: (v) => set({ t: v }) }),
+    slider(t('True phase φ'), { min: 0, max: 0.999, step: 0.001, value: st.phi, format: (v) => v.toFixed(3), onInput: (phi) => set({ phi }) }),
+    segmented(t('Presets'), { options: [[1 / 8, 'T  (1/8)'], [1 / 4, 'S  (1/4)'], [1 / 3, '1/3']], value: st.phi, onChange: (phi) => set({ phi }) }),
     shotsControl(st.shots, (shots) => set({ shots })),
-    toggle('Expand QFT†', { value: st.expand, onChange: (expand) => set({ expand }) }),
-    button('▶  Run circuit', () => set({})),
+    toggle(t('Expand QFT†'), { value: st.expand, onChange: (expand) => set({ expand }) }),
+    button(t('▶  Run circuit'), () => set({})),
   ],
   compute(st) {
-    const t = st.t, cs = range(t), T = 2 ** t;
-    const ops = [{ g: 'X', t: [t] }, ...Hs(cs), BAR,
-      ...cs.map((i) => ({ g: 'P', p: 2 * Math.PI * st.phi * 2 ** i, c: [i], t: [t], label: `U^${2 ** i}` })), BAR,
+    const nt = st.t, cs = range(nt), T = 2 ** nt;
+    const ops = [{ g: 'X', t: [nt] }, ...Hs(cs), BAR,
+      ...cs.map((i) => ({ g: 'P', p: 2 * Math.PI * st.phi * 2 ** i, c: [i], t: [nt], label: `U^${2 ** i}` })), BAR,
       { g: 'BLOCK', t: cs, ops: inverse(qftOps(cs)), label: 'QFT†' }, ...Ms(cs)];
-    const counts = run(t + 1, ops).sample(cs, st.shots);
+    const counts = run(nt + 1, ops).sample(cs, st.shots);
     const best = [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
     const est = parseInt(best, 2) / T;
     const err = Math.min(Math.abs(est - st.phi), 1 - Math.abs(est - st.phi));
     return {
-      n: t + 1, ops, expand: st.expand, wireLabels: [...cs.map((i) => `c${i}`), '|1⟩'],
+      n: nt + 1, ops, expand: st.expand, wireLabels: [...cs.map((i) => `c${i}`), '|1⟩'],
       results: [
         html(histogram(counts, { highlight: (k) => k === best, limit: 10, label: (k) => `${k} → ${(parseInt(k, 2) / T).toFixed(4)}` })),
-        verdict('Estimated phase', `φ̃ = ${parseInt(best, 2)}/${T} = ${est.toFixed(4)}`, `true φ = ${st.phi.toFixed(4)} · error ${err.toFixed(4)} (resolution 1/${T})`, err <= 1 / T ? 'ok' : 'warn'),
-        note('If φ·2^t is an integer the answer is exact; otherwise the peak spreads over neighbouring bins.'),
+        verdict(t('Estimated phase'), `φ̃ = ${parseInt(best, 2)}/${T} = ${est.toFixed(4)}`, t('true φ = {phi} · error {e} (resolution 1/{T})', { phi: st.phi.toFixed(4), e: err.toFixed(4), T }), err <= 1 / T ? 'ok' : 'warn'),
+        note(t('If φ·2^t is an integer the answer is exact; otherwise the peak spreads over neighbouring bins.')),
       ],
-      facts: { t, phi: st.phi, est, err },
+      facts: { t: nt, phi: st.phi, est, err },
     };
   },
 };
@@ -387,11 +388,11 @@ const shorFactor = {
   ],
   init: () => ({ nc: 4, a: 7, shots: 100, expand: false }),
   controls: (st, set) => [
-    segmented('Base a (coprime to 15)', { options: [2, 4, 7, 8, 11, 13], value: st.a, onChange: (a) => set({ a }) }),
-    slider('Counting qubits', { min: 3, max: 8, value: st.nc, onInput: (nc) => set({ nc }) }),
-    segmented('Shots', { options: [[20, '20'], [100, '100'], [1000, '1 000']], value: st.shots, onChange: (shots) => set({ shots }) }),
-    toggle('Expand QFT†', { value: st.expand, onChange: (expand) => set({ expand }) }),
-    button('▶  Run circuit', () => set({})),
+    segmented(t('Base a (coprime to 15)'), { options: [2, 4, 7, 8, 11, 13], value: st.a, onChange: (a) => set({ a }) }),
+    slider(t('Counting qubits'), { min: 3, max: 8, value: st.nc, onInput: (nc) => set({ nc }) }),
+    segmented(t('Shots'), { options: [[20, '20'], [100, '100'], [1000, '1 000']], value: st.shots, onChange: (shots) => set({ shots }) }),
+    toggle(t('Expand QFT†'), { value: st.expand, onChange: (expand) => set({ expand }) }),
+    button(t('▶  Run circuit'), () => set({})),
   ],
   compute(st) {
     const nc = st.nc, a = st.a, cs = range(nc), work = range(4, nc);
@@ -412,17 +413,17 @@ const shorFactor = {
     const x = modpow(a, r / 2, 15);
     const p = ok ? gcd(x + 1, 15) : 1, q = ok ? gcd(x - 1, 15) : 1;
     const success = ok && p * q === 15 && p !== 1 && q !== 1;
-    const table = `<table class="tbl"><thead><tr><th>Bits</th><th>Phase</th><th>Fraction</th><th>Guess r</th></tr></thead><tbody>${
+    const table = `<table class="tbl"><thead><tr><th>${t('Bits')}</th><th>${t('Phase')}</th><th>${t('Fraction')}</th><th>${t('Guess r')}</th></tr></thead><tbody>${
       rows.map((row) => `<tr><td>${row.k}</td><td>${row.phase.toFixed(4)}</td><td>${row.frac}</td><td>${row.r}</td></tr>`).join('')}</tbody></table>`;
     return {
       n: nc + 4, ops, expand: st.expand, wireLabels: [...cs.map((i) => `c${i}`), ...range(4).map((i) => `w${i}`)],
       results: [
         html(histogram(counts, { sort: 'key', label: (k) => `${k} → ${(parseInt(k, 2) / 2 ** nc).toFixed(3)}` })),
-        verdict(`Period r = lcm(…) = ${r}`, success ? `15 = ${Math.min(p, q)} × ${Math.max(p, q)}  ✓` : 'No factors this time',
-          success ? `${a}^${r / 2} mod 15 = ${x}  →  gcd(${x}±1, 15)` : 'r odd or trivial — pick another a or run again', success ? 'ok' : 'warn'),
+        verdict(t('Period r = lcm(…) = {r}', { r }), success ? `15 = ${Math.min(p, q)} × ${Math.max(p, q)}  ✓` : t('No factors this time'),
+          success ? `${a}^${r / 2} mod 15 = ${x}  →  gcd(${x}±1, 15)` : t('r odd or trivial — pick another a or run again'), success ? 'ok' : 'warn'),
       ],
-      extra: [el('h3', {}, 'Continued-fraction table'), html(table),
-        note('Each measured phase ≈ s/r. <code>Fraction(phase).limit_denominator(15)</code> guesses r; the least common multiple of the guesses is the period.')],
+      extra: [el('h3', {}, t('Continued-fraction table')), html(table),
+        note(t('Each measured phase ≈ s/r. <code>Fraction(phase).limit_denominator(15)</code> guesses r; the least common multiple of the guesses is the period.'))],
       facts: { a, nc, r, success },
     };
   },
@@ -446,10 +447,10 @@ const bb84 = {
   ],
   init: () => ({ n: 12, eve: false, ...bb84Arrays(12) }),
   controls: (st, set) => [
-    slider('Qubits sent', { min: 6, max: 24, value: st.n, onInput: (n) => set({ n, ...bb84Arrays(n) }) }),
-    toggle('Eve intercepts & resends', { value: st.eve, onChange: (eve) => set({ eve }) }),
-    button('↻  Randomize everything', () => set(bb84Arrays(st.n)), 'ghost'),
-    note('Click cells in the table below to flip Alice’s bits or anyone’s basis. Click a column number to see that qubit’s circuit.'),
+    slider(t('Qubits sent'), { min: 6, max: 24, value: st.n, onInput: (n) => set({ n, ...bb84Arrays(n) }) }),
+    toggle(t('Eve intercepts & resends'), { value: st.eve, onChange: (eve) => set({ eve }) }),
+    button(t('↻  Randomize everything'), () => set(bb84Arrays(st.n)), 'ghost'),
+    note(t('Click cells in the table below to flip Alice’s bits or anyone’s basis. Click a column number to see that qubit’s circuit.')),
   ],
   compute(st, set) {
     const n = st.n, eveBits = [], bobBits = [];
@@ -489,16 +490,16 @@ const bb84 = {
     const cell = (v, onclick, cls = '') => el('td', { class: 'click ' + cls, onclick }, v);
     const rowsDef = [
       ['#', (j) => el('td', { class: 'click idx' + (j === i ? ' sel' : ''), onclick: () => set({ sel: j }) }, String(j))],
-      ['Alice bit', (j) => cell(String(st.aBits[j]), flip('aBits', j))],
-      ['Alice basis', (j) => cell(st.aBases[j] ? 'X' : 'Z', flip('aBases', j), 'basis')],
-      ['Sent', (j) => el('td', { class: 'ket' }, KET[st.aBases[j]][st.aBits[j]])],
+      [t('Alice bit'), (j) => cell(String(st.aBits[j]), flip('aBits', j))],
+      [t('Alice basis'), (j) => cell(st.aBases[j] ? 'X' : 'Z', flip('aBases', j), 'basis')],
+      [t('Sent'), (j) => el('td', { class: 'ket' }, KET[st.aBases[j]][st.aBits[j]])],
       ...(st.eve ? [
-        ['Eve basis', (j) => cell(st.eBases[j] ? 'X' : 'Z', flip('eBases', j), 'basis eve')],
-        ['Eve reads', (j) => el('td', { class: 'eve' }, String(eveBits[j]))],
+        [t('Eve basis'), (j) => cell(st.eBases[j] ? 'X' : 'Z', flip('eBases', j), 'basis eve')],
+        [t('Eve reads'), (j) => el('td', { class: 'eve' }, String(eveBits[j]))],
       ] : []),
-      ['Bob basis', (j) => cell(st.bBases[j] ? 'X' : 'Z', flip('bBases', j), 'basis')],
-      ['Bob reads', (j) => el('td', {}, String(bobBits[j]))],
-      ['Keep?', (j) => {
+      [t('Bob basis'), (j) => cell(st.bBases[j] ? 'X' : 'Z', flip('bBases', j), 'basis')],
+      [t('Bob reads'), (j) => el('td', {}, String(bobBits[j]))],
+      [t('Keep?'), (j) => {
         const k = st.aBases[j] === st.bBases[j], bad = k && st.aBits[j] !== bobBits[j];
         return el('td', { class: k ? (bad ? 'bad' : 'good') : 'drop' }, k ? (bad ? '✗' : '✓') : '–');
       }],
@@ -509,13 +510,13 @@ const bb84 = {
       n: 1, ops, wireLabels: [`#${i}`],
       results: [
         el('div', { class: 'keys' },
-          el('div', { class: 'field-label' }, 'Alice’s sifted key'), el('code', {}, aKey.join('') || '—'),
-          el('div', { class: 'field-label' }, 'Bob’s sifted key'), el('code', {}, bKey.map((b, k) => (b !== aKey[k] ? `[${b}]` : b)).join('') || '—')),
-        verdict(`QBER over ${keep.length} sifted bits`, `${(qber * 100).toFixed(0)}% errors`,
-          errs ? 'Mismatches found → someone is listening. Abort!' : st.eve ? 'Eve got lucky this time — send more qubits.' : 'Keys agree — the channel looks clean.',
+          el('div', { class: 'field-label' }, t('Alice’s sifted key')), el('code', {}, aKey.join('') || '—'),
+          el('div', { class: 'field-label' }, t('Bob’s sifted key')), el('code', {}, bKey.map((b, k) => (b !== aKey[k] ? `[${b}]` : b)).join('') || '—')),
+        verdict(t('QBER over {k} sifted bits', { k: keep.length }), t('{p}% errors', { p: (qber * 100).toFixed(0) }),
+          t(errs ? 'Mismatches found → someone is listening. Abort!' : st.eve ? 'Eve got lucky this time — send more qubits.' : 'Keys agree — the channel looks clean.'),
           errs ? 'bad' : 'ok'),
       ],
-      extra: [el('h3', {}, 'Transmission log'), el('div', { class: 'scroll-x' }, table)],
+      extra: [el('h3', {}, t('Transmission log')), el('div', { class: 'scroll-x' }, table)],
       facts: { n, eve: st.eve, errs, kept: keep.length, eveMirrors: st.eve && st.eBases.every((v, j) => v === st.aBases[j]) },
     };
   },
@@ -535,12 +536,12 @@ const teleport = {
   ],
   init: () => ({ theta: 1.1, phi: 0.8, corr: true, r: [Math.random(), Math.random()], runs: 0 }),
   controls: (st, set) => [
-    slider('θ (polar)', { min: 0, max: 3.1416, step: 0.01, value: st.theta, format: (v) => `${((v * 180) / Math.PI).toFixed(0)}°`, onInput: (theta) => set({ theta }) }),
-    slider('φ (azimuth)', { min: 0, max: 6.2832, step: 0.01, value: st.phi, format: (v) => `${((v * 180) / Math.PI).toFixed(0)}°`, onInput: (phi) => set({ phi }) }),
-    segmented('Presets', { options: [['0', '|0⟩'], ['1', '|1⟩'], ['+', '|+⟩'], ['i', '|i⟩']], value: null,
+    slider(t('θ (polar)'), { min: 0, max: 3.1416, step: 0.01, value: st.theta, format: (v) => `${((v * 180) / Math.PI).toFixed(0)}°`, onInput: (theta) => set({ theta }) }),
+    slider(t('φ (azimuth)'), { min: 0, max: 6.2832, step: 0.01, value: st.phi, format: (v) => `${((v * 180) / Math.PI).toFixed(0)}°`, onInput: (phi) => set({ phi }) }),
+    segmented(t('Presets'), { options: [['0', '|0⟩'], ['1', '|1⟩'], ['+', '|+⟩'], ['i', '|i⟩']], value: null,
       onChange: (v) => set({ theta: { 0: 0, 1: Math.PI, '+': Math.PI / 2, i: Math.PI / 2 }[v], phi: v === 'i' ? Math.PI / 2 : 0 }) }),
-    toggle('Bob applies corrections', { value: st.corr, onChange: (corr) => set({ corr }) }),
-    button('▶  Teleport again', () => set({ r: [Math.random(), Math.random()], runs: st.runs + 1 })),
+    toggle(t('Bob applies corrections'), { value: st.corr, onChange: (corr) => set({ corr }) }),
+    button(t('▶  Teleport again'), () => set({ r: [Math.random(), Math.random()], runs: st.runs + 1 })),
   ],
   compute(st) {
     const pre = [{ g: 'BLOCK', t: [0], ops: prepOps(0, st.theta, st.phi), label: '|ψ⟩' }, { g: 'H', t: [1] }, { g: 'X', c: [1], t: [2] }, BAR,
@@ -555,16 +556,16 @@ const teleport = {
     const fid = (1 + vin.x * vout.x + vin.y * vout.y + vin.z * vout.z) / 2;
     const ops = [...pre, { g: 'M', t: [0] }, { g: 'M', t: [1] }, BAR,
       ...(st.corr ? [{ g: 'X', c: [1], t: [2] }, { g: 'Z', c: [0], t: [2] }] : [])];
-    const fix = [m1 ? 'X' : '', m0 ? 'Z' : ''].filter(Boolean).join(' then ') || 'nothing';
+    const fix = m1 && m0 ? t('{a} then {b}', { a: 'X', b: 'Z' }) : m1 ? 'X' : m0 ? 'Z' : '';
     return {
       n: 3, ops, wireLabels: ['q0 ψ', 'q1 A', 'q2 B'],
       results: [
         el('div', { class: 'blochs' },
-          el('figure', {}, html(bloch(vin, { label: 'ψ', size: 150 })), el('figcaption', {}, 'Alice’s input')),
-          el('figure', {}, html(bloch(vout, { label: 'B', size: 150, accent: 'var(--violet)' })), el('figcaption', {}, 'Bob’s qubit'))),
-        verdict(`Alice measured m0 m1 = ${m0}${m1}`, `Fidelity ${(fid * 100).toFixed(1)}%`,
-          st.corr ? `Bob applied ${fix}.` : `Without corrections Bob holds a scrambled copy (needed: ${fix}).`, fid > 0.999 ? 'ok' : 'warn'),
-        note('Each of the four outcomes 00, 01, 10, 11 occurs with probability 25%, regardless of |ψ⟩ — the measurement reveals nothing about the state.'),
+          el('figure', {}, html(bloch(vin, { label: 'ψ', size: 150 })), el('figcaption', {}, t('Alice’s input'))),
+          el('figure', {}, html(bloch(vout, { label: 'B', size: 150, accent: 'var(--violet)' })), el('figcaption', {}, t('Bob’s qubit')))),
+        verdict(t('Alice measured m0 m1 = {m}', { m: `${m0}${m1}` }), t('Fidelity {f}%', { f: (fid * 100).toFixed(1) }),
+          !fix ? t('No correction needed this time.') : st.corr ? t('Bob applied {fix}.', { fix }) : t('Without corrections Bob holds a scrambled copy (needed: {fix}).', { fix }), fid > 0.999 ? 'ok' : 'warn'),
+        note(t('Each of the four outcomes 00, 01, 10, 11 occurs with probability 25%, regardless of |ψ⟩ — the measurement reveals nothing about the state.')),
       ],
       facts: { theta: st.theta, corr: st.corr, fid, m0, m1, runs: st.runs },
     };
@@ -615,11 +616,11 @@ const shor9 = {
   ],
   init: () => ({ input: 'custom', err: 'none', q: 4, expand: false, kind: 'depol', sweep: null, running: false }),
   controls: (st, set) => [
-    segmented('Logical input', { options: [['zero', '|0⟩'], ['one', '|1⟩'], ['plus', '|+⟩'], ['custom', 'custom']], value: st.input, onChange: (input) => set({ input }) }),
-    segmented('Error', { options: [['none', 'none'], ['X', 'X'], ['Y', 'Y'], ['Z', 'Z']], value: st.err, onChange: (err) => set({ err }) }),
-    el('div', { class: 'field' }, el('div', { class: 'field-label' }, 'Error on qubit'),
+    segmented(t('Logical input'), { options: [['zero', '|0⟩'], ['one', '|1⟩'], ['plus', '|+⟩'], ['custom', t('custom')]], value: st.input, onChange: (input) => set({ input }) }),
+    segmented(t('Error'), { options: [['none', t('none')], ['X', 'X'], ['Y', 'Y'], ['Z', 'Z']], value: st.err, onChange: (err) => set({ err }) }),
+    el('div', { class: 'field' }, el('div', { class: 'field-label' }, t('Error on qubit')),
       el('div', { class: 'bits' }, ...range(9).map((q) => el('button', { type: 'button', class: 'bit' + (q === st.q ? ' on err' : ''), onclick: () => set({ q }) }, String(q))))),
-    toggle('Expand encoder / decoder', { value: st.expand, onChange: (expand) => set({ expand }) }),
+    toggle(t('Expand encoder / decoder'), { value: st.expand, onChange: (expand) => set({ expand }) }),
   ],
   compute(st, set) {
     const [theta, phi] = INPUTS[st.input];
@@ -643,30 +644,30 @@ const shor9 = {
       }
       set({ running: false, sweep: { code, bare: bareS, kind: st.kind } });
     };
-    const kindName = { depol: 'equal X, Y, Z', X: 'bit-flip X only', Z: 'phase-flip Z only' };
+    const kindName = { depol: t('equal X, Y, Z'), X: t('bit-flip X only'), Z: t('phase-flip Z only') };
     const extra = [
-      el('h3', {}, 'Noise sweep: every physical qubit fails with probability p'),
+      el('h3', {}, t('Noise sweep: every physical qubit fails with probability p')),
       el('div', { class: 'row-controls' },
-        segmented(null, { options: [['depol', 'Equal X,Y,Z'], ['X', 'Bit-flip X'], ['Z', 'Phase-flip Z']], value: st.kind, onChange: (kind) => set({ kind }) }),
-        button(st.running ? 'Simulating…' : '▶  Run sweep (33 000 trials)', st.running ? () => {} : runSweep)),
+        segmented(null, { options: [['depol', t('Equal X,Y,Z')], ['X', t('Bit-flip X')], ['Z', t('Phase-flip Z')]], value: st.kind, onChange: (kind) => set({ kind }) }),
+        button(st.running ? t('Simulating…') : t('▶  Run sweep (33 000 trials)'), st.running ? () => {} : runSweep)),
     ];
     if (st.sweep) {
       extra.push(html(lineChart([
         { name: 'Shor code', color: 'var(--cyan)', pts: st.sweep.code },
         { name: 'No correction', color: 'var(--muted)', pts: st.sweep.bare },
-      ], { xLabel: 'physical error probability p', yLabel: 'logical infidelity', xMax: 0.1, width: 900, height: 320 })));
-      extra.push(el('div', { class: 'legend' }, el('span', { class: 'lg lg-cyan' }, 'Shor 9-qubit code'), el('span', { class: 'lg lg-muted' }, `Unprotected qubit · noise: ${kindName[st.sweep.kind]}`)));
-      extra.push(note('For small p the code wins: it only fails when two or more of its 9 qubits err (∝ p²), while a bare qubit fails ∝ p. Past the crossover (a few percent) the extra qubits add more errors than the code can fix — which is why real devices need error rates well below threshold.'));
+      ], { xLabel: t('physical error probability p'), yLabel: t('logical infidelity'), xMax: 0.1, width: 900, height: 320 })));
+      extra.push(el('div', { class: 'legend' }, el('span', { class: 'lg lg-cyan' }, t('Shor 9-qubit code')), el('span', { class: 'lg lg-muted' }, t('Unprotected qubit · noise: {k}', { k: kindName[st.sweep.kind] }))));
+      extra.push(note(t('For small p the code wins: it only fails when two or more of its 9 qubits err (∝ p²), while a bare qubit fails ∝ p. Past the crossover (a few percent) the extra qubits add more errors than the code can fix — which is why real devices need error rates well below threshold.')));
     }
     return {
       n: 9, ops, expand: st.expand,
       results: [
         el('div', { class: 'blochs' },
-          el('figure', {}, html(bloch(blochOf(theta, phi), { label: 'ψ', size: 150 })), el('figcaption', {}, 'Logical input')),
-          el('figure', {}, html(bloch(s.bloch(0), { label: 'out', size: 150, accent: 'var(--violet)' })), el('figcaption', {}, 'After decoding'))),
-        verdict('Recovered logical qubit', `Fidelity ${(F * 100).toFixed(1)}%  ${F > 0.999 ? '✓' : '✗'}`,
-          `Unprotected qubit with the same error: ${(Fb * 100).toFixed(1)}%`, F > 0.999 ? 'ok' : 'bad'),
-        el('div', { class: 'keys' }, el('div', { class: 'field-label' }, 'Syndrome left in ancillas q8…q1'), el('code', {}, syn)),
+          el('figure', {}, html(bloch(blochOf(theta, phi), { label: 'ψ', size: 150 })), el('figcaption', {}, t('Logical input'))),
+          el('figure', {}, html(bloch(s.bloch(0), { label: 'out', size: 150, accent: 'var(--violet)' })), el('figcaption', {}, t('After decoding')))),
+        verdict(t('Recovered logical qubit'), `${t('Fidelity {f}%', { f: (F * 100).toFixed(1) })}  ${F > 0.999 ? '✓' : '✗'}`,
+          t('Unprotected qubit with the same error: {f}%', { f: (Fb * 100).toFixed(1) }), F > 0.999 ? 'ok' : 'bad'),
+        el('div', { class: 'keys' }, el('div', { class: 'field-label' }, t('Syndrome left in ancillas q8…q1')), el('code', {}, syn)),
       ],
       extra,
       facts: { err: st.err, q: st.q, F, sweepDone: !!st.sweep },

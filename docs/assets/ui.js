@@ -1,5 +1,7 @@
 // Minimal DOM helpers for lab controls.
 
+import { t } from './i18n.js';
+
 export function el(tag, attrs = {}, ...children) {
   const e = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
@@ -26,7 +28,7 @@ export function slider(label, { min, max, step = 1, value, format = (v) => v, on
 }
 
 // Bit toggles, displayed most-significant bit first. value is an integer.
-export function bits(label, { n, value, onChange, hint = 'click to flip' }) {
+export function bits(label, { n, value, onChange, hint = t('click to flip') }) {
   const row = el('div', { class: 'bits' });
   for (let i = n - 1; i >= 0; i--) {
     const on = (value >> i) & 1;
@@ -61,7 +63,7 @@ export function button(text, onClick, variant = 'primary') {
 }
 
 export const shotsControl = (value, onChange) =>
-  segmented('Shots', { options: [[100, '100'], [1000, '1 000'], [10000, '10 000']], value, onChange });
+  segmented(t('Shots'), { options: [[100, '100'], [1000, '1 000'], [10000, '10 000']], value, onChange });
 
 export function verdict(label, main, sub, tone = 'ok') {
   return el('div', { class: `verdict verdict-${tone}` },

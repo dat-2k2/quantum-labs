@@ -2,7 +2,7 @@
 
 Coursework on quantum algorithms — Qiskit notebooks in `using_circuit/` and a NumPy simulator in `matrix_impl/`.
 
-**Interactive site:** https://dat-2k2.github.io/quantum-labs/ — a short course through every lab (QRNG, Deutsch–Jozsa, Bernstein–Vazirani, Simon, Grover, QFT, phase estimation, Shor, BB84, teleportation, Shor 9-qubit code), re-implemented on a small state-vector simulator that runs in the browser. Each lab is a focused lesson: a short explanation, missions on the live circuit and quizzes, with XP, levels and badges tracking progress. An arena of circuit puzzles sits on top of a free-form circuit composer. Light and dark themes follow the system setting.
+**Interactive site:** https://dat-2k2.github.io/quantum-labs/ — a short course through every lab (QRNG, Deutsch–Jozsa, Bernstein–Vazirani, Simon, Grover, QFT, phase estimation, Shor, BB84, teleportation, Shor 9-qubit code), re-implemented on a small state-vector simulator that runs in the browser. Each lab is a focused lesson: a short explanation, missions on the live circuit and quizzes, with XP, levels and badges tracking progress. An arena of circuit puzzles sits on top of a free-form circuit composer. Light and dark themes follow the system setting. Available in English and Vietnamese (switch in the header, or link with `?lang=vi`).
 
 Design: [Figma file](https://www.figma.com/design/15VzLArJ1CFN475dHDfinY)
 
@@ -16,6 +16,7 @@ The site is static (no build step) and lives in `docs/`:
 - `assets/missions.js` — chapters, missions, quizzes, badges and arena puzzles
 - `assets/game.js` — XP, levels, unlocks, toasts (progress saved in localStorage)
 - `assets/app.js` — routing and views: course list, lesson flow, arena composer
+- `assets/i18n.js`, `assets/i18n.vi.js`, `assets/localize.js` — translation helper, Vietnamese copy, content swap
 
 Preview locally with `python3 -m http.server -d docs` and open http://localhost:8000.
 
