@@ -36,6 +36,7 @@ const go = (hash) => { if (location.hash === hash) route(); else location.hash =
 function renderHud() {
   const lv = G.level();
   $('hud').textContent = t('{xp} XP · Level {lv}', { xp: G.state().xp, lv: lv.i });
+  $('hud').title = lv.name;
 }
 
 let lockOpen = null;
@@ -83,21 +84,23 @@ function renderCourse() {
   const labsDone = G.ORDER.filter(G.labComplete).length;
   const missions = G.ORDER.reduce((a, id) => a + G.doneList(id).length, 0);
   const totalMissions = G.ORDER.reduce((a, id) => a + G.labTotal(id), 0);
+  $('strip').textContent = t('{l}/{L} labs · {m}/{M} missions · badges {b}/{B}', { l: labsDone, L: G.ORDER.length, m: missions, M: totalMissions, b: st.badges.length, B: G.ALL_BADGES.length });
   $('side').replaceChildren(
+    el('div', { class: 'label' }, t('Your progress')),
     el('div', { class: 'side-level' },
-      el('div', { class: 'field-label' }, t('Level {n}', { n: lv.i })), el('div', { class: 'name' }, lv.name),
+      el('div', { class: 'name' }, t('Level {n} · {name}', { n: lv.i, name: lv.name })),
       el('div', { class: 'meter' }, el('span', { style: `width:${lv.pct * 100}%` })),
       el('div', { class: 'mono-sm' }, lv.next ? t('{xp} / {next} XP to {name}', { xp: st.xp, next: lv.next, name: lv.nextName }) : t('{xp} XP — top level', { xp: st.xp }))),
     el('dl', { class: 'stats' }, ...[
       ['Labs completed', `${labsDone} / ${G.ORDER.length}`], ['Missions', `${missions} / ${totalMissions}`],
       ['Badges', `${st.badges.length} / ${G.ALL_BADGES.length}`], ['Arena puzzles', `${st.arena.length} / ${CHALLENGES.length}`],
     ].map(([k, v]) => el('div', {}, el('dt', {}, t(k)), el('dd', {}, v)))),
-    el('div', { class: 'side-level' }, el('div', { class: 'field-label' }, t('Badges')),
-      el('div', { class: 'badge-list' }, ...G.ALL_BADGES.map((id) => {
+    el('div', { class: 'side-level' }, el('div', { class: 'field-label' }, t('Badges · {b}/{n}', { b: st.badges.length, n: G.ALL_BADGES.length })),
+      el('div', { class: 'medals' }, ...G.ALL_BADGES.map((id) => {
         const [emoji, name] = G.badgeInfo(id), got = st.badges.includes(id);
-        return el('span', { class: 'badge' + (got ? ' got' : ''), title: got ? name : t('{name} — locked', { name }), 'aria-label': got ? name : t('{name} (locked)', { name }) }, emoji);
+        return el('span', { class: 'medal' + (got ? ' got' : ''), title: got ? name : t('{name} — locked', { name }), 'aria-label': got ? name : t('{name} (locked)', { name }) }, emoji);
       }))),
-    el('button', { type: 'button', class: 'reset', onclick: () => { if (confirm(t('Reset all progress? Your XP, missions and badges will be erased.'))) { G.reset(); renderCourse(); } } }, t('Reset progress')));
+    el('button', { type: 'button', class: 'link-btn reset', onclick: () => { if (confirm(t('Reset all progress? Your XP, missions and badges will be erased.'))) { G.reset(); renderCourse(); } } }, t('Reset progress')));
 }
 
 // ============================================================ lesson
@@ -121,7 +124,16 @@ function openLab(id) {
   renderWorkspace();
 }
 
+function showToc(on) {
+  document.body.classList.toggle('show-toc', on);
+  $('seg-toc').setAttribute('aria-pressed', String(on));
+  $('seg-step').setAttribute('aria-pressed', String(!on));
+}
+$('seg-toc').addEventListener('click', () => showToc(true));
+$('seg-step').addEventListener('click', () => showToc(false));
+
 function goStep(i) {
+  showToc(false);
   current.step = Math.max(0, Math.min(current.steps.length - 1, i));
   current.sel = null; current.wrong = false;
   renderStep();
@@ -161,15 +173,16 @@ function renderStep() {
   const actions = steps.filter((x) => x.type === 'mission');
   const quizzes = steps.filter((x) => x.type === 'quiz');
 
+  const stepLabel = (x) => x.type === 'learn' ? t('Lesson') : x.type === 'done' ? t('Summary')
+    : x.type === 'quiz' ? t('Quiz {n}', { n: quizzes.indexOf(x) + 1 }) : t('Mission {n}', { n: actions.indexOf(x) + 1 });
   // top bar
   $('segs').replaceChildren(...steps.slice(0, -1).map((x, i) => el('span', {
     class: stepDone(x) ? 'on' : i === step ? 'here' : '',
   })));
-  $('lxp').textContent = `⚡ ${G.state().xp}`;
+  $('lxp').textContent = `⚡ ${G.state().xp} XP`;
+  $('seg-step').textContent = stepLabel(s);
 
   // contents
-  const stepLabel = (x) => x.type === 'learn' ? t('Lesson') : x.type === 'done' ? t('Summary')
-    : x.type === 'quiz' ? t('Quiz {n}', { n: quizzes.indexOf(x) + 1 }) : t('Mission {n}', { n: actions.indexOf(x) + 1 });
   const nextId = G.ORDER[G.ORDER.indexOf(lab.id) + 1];
   $('toc').replaceChildren(
     el('p', { class: 'eyebrow' }, `${String(ci + 1).padStart(2, '0')} · ${CHAPTERS[ci].name}`),
@@ -424,10 +437,24 @@ translateDom();
 document.title = t('Quantum Labs — quantum algorithms, hands on');
 const other = lang === 'vi' ? 'en' : 'vi';
 for (const btn of document.querySelectorAll('.lang-switch')) {
-  btn.textContent = other === 'vi' ? 'Tiếng Việt' : 'English';
+  const full = other === 'vi' ? 'Tiếng Việt' : 'English';
+  // the header is tight, so it shows a language code; the footer spells the name out
+  btn.textContent = btn.closest('#nav') ? other.toUpperCase() : full;
+  btn.title = full;
   btn.lang = other;
   btn.setAttribute('aria-label', t(other === 'vi' ? 'Switch to Vietnamese' : 'Switch to English'));
   btn.addEventListener('click', () => setLang(other));
+}
+// The shared kit labels its theme toggle in English; relabel it after every theme change.
+function themeLabel() {
+  const dark = (document.documentElement.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')) === 'dark';
+  const label = t(dark ? 'Switch to light theme' : 'Switch to dark theme');
+  document.querySelectorAll('.theme-toggle').forEach((btn) => { btn.setAttribute('aria-label', label); btn.title = label; });
+}
+if (lang !== 'en') {
+  themeLabel();
+  document.documentElement.addEventListener('themechange', themeLabel);
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', themeLabel);
 }
 G.onChange(() => { renderHud(); if (!$('view-course').hidden) renderCourse(); });
 renderHud();

@@ -33,6 +33,13 @@ export function setLang(next) {
 export function translateDom(root = document) {
   document.documentElement.lang = lang;
   if (lang === 'en') return;
+  // The shared kit ships a Latin-only Geist; add Google's Vietnamese subset of the same family.
+  if (lang === 'vi' && !document.getElementById('font-vi')) {
+    document.head.append(Object.assign(document.createElement('link'), {
+      id: 'font-vi', rel: 'stylesheet',
+      href: 'https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap',
+    }));
+  }
   root.querySelectorAll('[data-i18n]').forEach((node) => { node.innerHTML = t(node.innerHTML.trim()); });
   root.querySelectorAll('[data-i18n-attr]').forEach((node) => {
     for (const a of node.dataset.i18nAttr.split(',')) if (node.hasAttribute(a)) node.setAttribute(a, t(node.getAttribute(a)));

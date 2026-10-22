@@ -2,7 +2,9 @@
 
 Coursework on quantum algorithms — Qiskit notebooks in `using_circuit/` and a NumPy simulator in `matrix_impl/`.
 
-**Interactive site:** https://dat-2k2.github.io/quantum-labs/ — a short course through every lab (QRNG, Deutsch–Jozsa, Bernstein–Vazirani, Simon, Grover, QFT, phase estimation, Shor, BB84, teleportation, Shor 9-qubit code), re-implemented on a small state-vector simulator that runs in the browser. Each lab is a focused lesson: a short explanation, missions on the live circuit and quizzes, with XP, levels and badges tracking progress. An arena of circuit puzzles sits on top of a free-form circuit composer. Light and dark themes follow the system setting. Available in English and Vietnamese (switch in the header, or link with `?lang=vi`).
+**Interactive site:** https://dat-2k2.github.io/quantum-labs/ — a short course through every lab (QRNG, Deutsch–Jozsa, Bernstein–Vazirani, Simon, Grover, QFT, phase estimation, Shor, BB84, teleportation, Shor 9-qubit code), re-implemented on a small state-vector simulator that runs in the browser. Each lab is a focused lesson: a short explanation, missions on the live circuit and quizzes, with XP, levels and badges tracking progress. An arena of circuit puzzles sits on top of a free-form circuit composer. Light and dark themes follow the system setting. Available in English and Vietnamese (switch in the footer or, on wide screens, the header; or link with `?lang=vi`).
+
+The site is styled with the shared UI kit from the portfolio (`https://dat-2k2.github.io/kit/kit.css` and `kit.js`, light/dark, Geist); only the layout lives in `docs/assets/style.css`.
 
 Design: [Figma file](https://www.figma.com/design/15VzLArJ1CFN475dHDfinY)
 

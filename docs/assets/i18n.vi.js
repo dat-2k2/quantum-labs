@@ -30,6 +30,28 @@ export const VI = {
     'Progress is saved in this browser · notebooks on <a href="https://github.com/dat-2k2/quantum-labs" target="_blank" rel="noopener">GitHub</a>':
       'Tiến độ được lưu trên trình duyệt này · notebook gốc trên <a href="https://github.com/dat-2k2/quantum-labs" target="_blank" rel="noopener">GitHub</a>',
 
+    // shared kit header, footer and lesson bar
+    'Skip to content': 'Chuyển đến nội dung',
+    'Nguyen Quoc Dat — portfolio home': 'Nguyễn Quốc Đạt — trang portfolio',
+    'Primary': 'Điều hướng chính',
+    'Hire me': 'Liên hệ',
+    'Switch to dark theme': 'Chuyển sang giao diện tối',
+    'Switch to light theme': 'Chuyển sang giao diện sáng',
+    'Quantum computing · Lab notebook': 'Điện toán lượng tử · Sổ tay thực hành',
+    'Open the Arena': 'Vào đấu trường',
+    'Progress is saved in this browser.': 'Tiến độ được lưu trên trình duyệt này.',
+    '✕ Course': '✕ Khóa học',
+    'Lesson navigation': 'Điều hướng bài học',
+    'Step': 'Bước',
+    'Contents': 'Mục lục',
+    'Re-run': 'Chạy lại',
+    'Run the circuit again (Ctrl/⌘ + Enter)': 'Chạy lại mạch (Ctrl/⌘ + Enter)',
+    'Quantum Labs · notebooks on <a href="https://github.com/dat-2k2/quantum-labs" target="_blank" rel="noopener">GitHub</a> · part of <a href="https://dat-2k2.github.io/">dat-2k2.github.io</a>':
+      'Quantum Labs · notebook gốc trên <a href="https://github.com/dat-2k2/quantum-labs" target="_blank" rel="noopener">GitHub</a> · thuộc <a href="https://dat-2k2.github.io/">dat-2k2.github.io</a>',
+    'Level {n} · {name}': 'Cấp {n} · {name}',
+    'Badges · {b}/{n}': 'Huy hiệu · {b}/{n}',
+    '{l}/{L} labs · {m}/{M} missions · badges {b}/{B}': '{l}/{L} bài · {m}/{M} nhiệm vụ · huy hiệu {b}/{B}',
+
     // course page
     '{xp} XP · Level {lv}': '{xp} XP · Cấp {lv}',
     'Continue: {lab}  →': 'Học tiếp: {lab}  →',
