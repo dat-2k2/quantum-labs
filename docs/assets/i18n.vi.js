@@ -128,6 +128,28 @@ export const VI = {
     'Bar = probability · colour and angle = phase. Basis states read q{top} … q0. Right-click a cell to erase.':
       'Thanh = xác suất · màu và góc = pha. Trạng thái cơ sở đọc từ q{top} … q0. Nhấp chuột phải vào ô để xóa.',
 
+    // step-through player
+    'Step through the circuit': 'Chạy từng bước qua mạch',
+    'Initial state': 'Trạng thái ban đầu',
+    'Start: every qubit is |0⟩': 'Bắt đầu: mọi qubit ở |0⟩',
+    'Step {i} / {n}': 'Bước {i} / {n}',
+    'Play': 'Chạy',
+    'Pause': 'Tạm dừng',
+    'Back to start': 'Về đầu',
+    'Previous step': 'Bước trước',
+    'Next step': 'Bước sau',
+    'Jump to end': 'Đến cuối',
+    'Speed': 'Tốc độ',
+    'Circuit progress': 'Tiến trình mạch',
+    'Amplitudes': 'Biên độ',
+    'Each qubit': 'Từng qubit',
+    'Showing the {k} largest of {N} amplitudes.': 'Đang hiện {k} biên độ lớn nhất trong {N}.',
+    'Bar = probability · colour and angle = phase.': 'Thanh = xác suất · màu và góc = pha.',
+    '+ {n} more qubits not shown.': 'Còn {n} qubit nữa không hiển thị.',
+    'A shorter arrow means the qubit is entangled with the others.': 'Mũi tên càng ngắn, qubit càng rối lượng tử với các qubit khác.',
+    'Measurement: shown before collapse — each shot picks one outcome with these probabilities.':
+      'Phép đo: đây là trạng thái trước khi sụp đổ — mỗi lần đo chọn một kết quả theo các xác suất này.',
+
     // feedback toasts
     'Level {i}': 'Cấp {i}',
     'You are now a <b>{name}</b>': 'Bạn đã lên <b>{name}</b>',

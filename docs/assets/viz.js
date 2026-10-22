@@ -8,7 +8,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 const GLYPH = { SDG: 'S†', TDG: 'T†', M: '', INIT: '' };
 const ROW = 46, GATE = 34, PAD = 14, LABEL_W = 46;
 
-function opLabel(op) {
+export function opLabel(op) {
   if (op.label != null) return op.label;
   if (op.g in GLYPH) return GLYPH[op.g];
   if (op.g === 'P' || op.g === 'RY') return `${op.g}`;
@@ -31,7 +31,8 @@ function flatten(ops, expand) {
   return out;
 }
 
-export function drawCircuit(ops, n, { expand = false, wireLabels } = {}) {
+// Group ops into drawing columns: an op goes into the first column after every wire it spans is free.
+export function layoutCircuit(ops, n, expand = false) {
   const flat = flatten(ops, expand);
   const level = new Array(n).fill(0);
   const cols = []; // { ops: [], w }
@@ -48,6 +49,12 @@ export function drawCircuit(ops, n, { expand = false, wireLabels } = {}) {
       : Math.max(GATE, textWidth(opLabel(op)) + (isBig ? 12 : 0));
     cols[col].w = Math.max(cols[col].w, w);
   }
+  return cols;
+}
+
+// Each column is drawn in its own <g data-col> with a highlight band, so a step-through player can mark progress.
+export function drawCircuit(ops, n, { expand = false, wireLabels } = {}) {
+  const cols = layoutCircuit(ops, n, expand);
   let x = LABEL_W + PAD;
   const xs = cols.map((c) => { const cx = x + c.w / 2; x += c.w + PAD; return cx; });
   const width = Math.max(x + PAD, 240);
@@ -55,14 +62,18 @@ export function drawCircuit(ops, n, { expand = false, wireLabels } = {}) {
   const y = (q) => 4 + ROW / 2 + q * ROW;
 
   let s = `<svg class="circuit" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">`;
+  cols.forEach((col, ci) => {
+    s += `<rect class="c-band" data-col="${ci}" x="${xs[ci] - col.w / 2 - PAD / 2}" y="2" width="${col.w + PAD}" height="${height - 4}" rx="8"/>`;
+  });
   for (let q = 0; q < n; q++) {
     const lbl = wireLabels?.[q] ?? `q${q}`;
     s += `<text class="c-wlabel" x="4" y="${y(q) + 4}">${esc(lbl)}</text>`;
     s += `<line class="c-wire" x1="${LABEL_W}" y1="${y(q)}" x2="${width - 6}" y2="${y(q)}"/>`;
   }
   cols.forEach((col, ci) => {
-    const cx = xs[ci];
-    for (const op of col.ops) s += drawOp(op, cx, col.w, y, n);
+    s += `<g class="c-col" data-col="${ci}">`;
+    for (const op of col.ops) s += drawOp(op, xs[ci], col.w, y, n);
+    s += '</g>';
   });
   return s + '</svg>';
 }

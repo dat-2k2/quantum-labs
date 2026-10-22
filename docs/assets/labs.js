@@ -331,6 +331,7 @@ const qft = {
         verdict(t('Matches classical DFT'), t('max error {e}  {mark}', { e: err.toExponential(1), mark: err < 1e-9 ? '✓' : '✗' }), 'numpy: np.fft.ifft(ψ, norm="ortho")'),
         note(t('Circle size = magnitude, hand + colour = phase. For a basis input every output has equal size and the phase advances by x·2π/N per step.')),
       ],
+      init: st.mode === 'random' ? Object.assign(new State(n), { re: Float64Array.from(st.input.re), im: Float64Array.from(st.input.im) }) : null,
       facts: { n, mode: st.mode, x: st.x, err },
     };
   },

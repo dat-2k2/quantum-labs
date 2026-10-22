@@ -101,6 +101,7 @@
                 <button class="link-btn" id="run" type="button" title="Run the circuit again (Ctrl/⌘ + Enter)" data-i18n-attr="title"><span data-i18n>Re-run</span> <kbd>⌘↵</kbd></button>
               </div>
               <div class="circuit-canvas" id="circuit"></div>
+              <div id="player"></div>
             </div>
             <div class="card results" id="results" aria-live="polite" aria-label="Results" data-i18n-attr="aria-label"></div>
           </div>
@@ -124,7 +125,7 @@
       <div class="palette" id="palette" role="toolbar" aria-label="Gate palette" data-i18n-attr="aria-label"></div>
       <div class="scroll-x card composer-card"><div class="composer" id="composer"></div></div>
       <div class="row-controls" id="composer-actions"></div>
-      <h3 class="sv-title h4" data-i18n>State vector</h3>
+      <div class="card arena-player" id="arena-player"></div>
       <div id="statevec"></div>
     </section>
   </main>

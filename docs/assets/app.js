@@ -1,6 +1,7 @@
 import './localize.js';
 import { LABS } from './labs.js';
-import { drawCircuit } from './viz.js';
+import { drawCircuit, layoutCircuit } from './viz.js';
+import { Player, circuitHighlighter } from './stepper.js';
 import { run } from './sim.js';
 import { el } from './ui.js';
 import { CHAPTERS, MISSIONS, CHALLENGES } from './missions.js';
@@ -152,6 +153,10 @@ function renderWorkspace() {
   }
   const res = lab.compute(st, set);
   $('circuit').innerHTML = drawCircuit(res.ops, res.n, { expand: res.expand, wireLabels: res.wireLabels });
+  lessonPlayer.load({
+    n: res.n, init: res.init, wireLabels: res.wireLabels, highlight: circuitHighlighter($('circuit')),
+    cols: layoutCircuit(res.ops, res.n, res.expand).map((c, key) => ({ key, ops: c.ops })),
+  });
   $('circuit-tag').textContent = t(res.n === 1 ? '{n} qubit · {g} ops' : '{n} qubits · {g} ops', { n: res.n, g: countGates(res.ops, res.expand) });
   $('results').replaceChildren(...res.results);
   $('extra').hidden = !res.extra;
@@ -318,7 +323,7 @@ function composerOps() {
     const ctrls = range(comp.n).filter((q) => comp.grid[q][c] === '●');
     for (let q = 0; q < comp.n; q++) {
       const g = comp.grid[q][c];
-      if (g && g !== '●') ops.push({ g, t: [q], c: ctrls });
+      if (g && g !== '●') ops.push({ g, t: [q], c: ctrls, col: c });
     }
   }
   return ops;
@@ -368,7 +373,7 @@ function renderComposer() {
       const ctrlInCol = range(comp.n).some((r) => comp.grid[r][c] === '●');
       const cls = !g ? '' : g === '●' ? ' dot' : g === 'X' && ctrlInCol ? ' oplus' : ' g';
       kids.push(el('button', {
-        type: 'button', class: 'slot' + cls, 'aria-label': t('q{q} column {c}', { q, c: c + 1 }) + (g ? ': ' + g : ''),
+        type: 'button', class: 'slot' + cls, 'data-col': c, 'aria-label': t('q{q} column {c}', { q, c: c + 1 }) + (g ? ': ' + g : ''),
         onclick: () => { comp.grid[q][c] = comp.tool === '⌫' || comp.grid[q][c] === comp.tool ? null : comp.tool; update(); },
         oncontextmenu: (e) => { e.preventDefault(); comp.grid[q][c] = null; update(); },
       }, g && g !== '●' ? (cls === ' oplus' ? '⊕' : g) : ''));
@@ -400,18 +405,16 @@ function update() { saveComposer(); renderComposer(); }
 
 function renderState() {
   const s = run(comp.n, composerOps());
-  const rows = [];
-  for (let i = 0; i < s.N; i++) {
-    const p = s.prob(i);
-    if (p < 1e-9) continue;
-    const ang = (Math.atan2(s.im[i], s.re[i]) * 180) / Math.PI;
-    rows.push(el('div', { class: 'sv-row' },
-      el('span', {}, `|${i.toString(2).padStart(comp.n, '0')}⟩`),
-      el('span', { class: 'sv-bar' }, el('span', { style: `width:${p * 100}%;background:hsl(${(220 + ang + 360) % 360} 70% 55%)` })),
-      el('span', { class: 'sv-v' }, `${(p * 100).toFixed(1)}% ∠${ang.toFixed(0)}°`)));
-  }
-  $('statevec').replaceChildren(el('div', { class: 'sv' }, ...rows.slice(0, 32)),
-    el('div', { class: 'sv-note' }, t('Bar = probability · colour and angle = phase. Basis states read q{top} … q0. Right-click a cell to erase.', { top: comp.n - 1 })));
+  arenaPlayer.load({
+    n: comp.n,
+    cols: range(COLS).map((col) => ({ key: col, ops: composerOps().filter((op) => op.col === col) })),
+    highlight: (key) => $('composer').querySelectorAll('.slot').forEach((b) => {
+      const col = Number(b.dataset.col);
+      b.classList.toggle('now', col === key);
+      b.classList.toggle('todo', key == null || col > key);
+    }),
+  });
+  $('statevec').replaceChildren(el('div', { class: 'sv-note' }, t('Bar = probability · colour and angle = phase. Basis states read q{top} … q0. Right-click a cell to erase.', { top: comp.n - 1 })));
 
   const c = challenge();
   if (!c) {
@@ -433,6 +436,8 @@ function renderState() {
 }
 
 // ============================================================ boot
+const lessonPlayer = new Player($('player'));
+const arenaPlayer = new Player($('arena-player'));
 translateDom();
 document.title = t('Quantum Labs — quantum algorithms, hands on');
 const other = lang === 'vi' ? 'en' : 'vi';
